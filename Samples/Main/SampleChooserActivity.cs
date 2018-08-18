@@ -29,42 +29,40 @@ using Java.Lang;
 using Utils = Com.Google.Android.Exoplayer2.Util.Util;
 using Android.Graphics;
 using android = Android;
-using Android.Content.Res;
 
 namespace Com.Google.Android.Exoplayer2.Demo
 {
     /** An activity for selecting from a list of media samples. */
     public class SampleChooserActivity : Activity, DownloadTracker.IListener, ExpandableListView.IOnChildClickListener
     {
+        private const string Tag = "SampleChooserActivity";
 
-        private static string TAG = "SampleChooserActivity";
-
-        private DownloadTracker downloadTracker;
-        private SampleAdapter sampleAdapter;
+        private DownloadTracker _downloadTracker;
+        private SampleAdapter _sampleAdapter;
 
         protected override void OnCreate(Bundle savedInstanceState)
         {
             base.OnCreate(savedInstanceState);
             SetContentView(Resource.Layout.sample_chooser_activity);
-            sampleAdapter = new SampleAdapter(this);
-            ExpandableListView sampleListView = (ExpandableListView)FindViewById(Resource.Id.sample_list);
-            sampleListView.SetAdapter(sampleAdapter);
+            _sampleAdapter = new SampleAdapter(this);
+            var sampleListView = (ExpandableListView)FindViewById(Resource.Id.sample_list);
+            sampleListView.SetAdapter(_sampleAdapter);
             sampleListView.SetOnChildClickListener(this);
 
-            Intent intent = Intent;
-            string dataUri = intent.DataString;
+            var intent = Intent;
+            var dataUri = intent.DataString;
             string[] uris;
             if (dataUri != null)
             {
-                uris = new string[] { dataUri };
+                uris = new[] { dataUri };
             }
             else
             {
-                List<string> uriList = new List<string>();
-                AssetManager assetManager = Assets;
+                var uriList = new List<string>();
+                var assetManager = Assets;
                 try
                 {
-                    foreach (string asset in assetManager.List(""))
+                    foreach (var asset in assetManager.List(""))
                     {
                         if (asset.EndsWith(".exolist.json"))
                         {
@@ -75,14 +73,15 @@ namespace Com.Google.Android.Exoplayer2.Demo
                 catch (Java.IO.IOException e)
                 {
                     Toast.MakeText(ApplicationContext, Resource.String.sample_list_load_error, ToastLength.Long).Show();
+                    Toast.MakeText(ApplicationContext, e.Message, ToastLength.Long).Show();
                 }
 
                 uriList.Sort();
                 uris = uriList.ToArray();
             }
 
-            downloadTracker = ((DemoApplication)Application).GetDownloadTracker();
-            SampleListLoader loaderTask = new SampleListLoader(this);
+            _downloadTracker = ((DemoApplication)Application).GetDownloadTracker();
+            var loaderTask = new SampleListLoader(this);
             loaderTask.Execute(uris);
 
             // Start the download service if it should be running but it's not currently.
@@ -91,30 +90,30 @@ namespace Com.Google.Android.Exoplayer2.Demo
             // (e.g. if device screen is locked).
             try
             {
-                Offline.DownloadService.Start(this, Java.Lang.Class.FromType(typeof(DemoDownloadService)));
+                Offline.DownloadService.Start(this, Class.FromType(typeof(DemoDownloadService)));
             }
-            catch (IllegalStateException e)
+            catch (IllegalStateException)
             {
-                Offline.DownloadService.StartForeground(this, Java.Lang.Class.FromType(typeof(DemoDownloadService)));
+                Offline.DownloadService.StartForeground(this, Class.FromType(typeof(DemoDownloadService)));
             }
         }
 
         protected override void OnStart()
         {
-            downloadTracker.AddListener(this);
-            sampleAdapter.NotifyDataSetChanged();
+            _downloadTracker.AddListener(this);
+            _sampleAdapter.NotifyDataSetChanged();
             base.OnStart();
         }
 
         protected override void OnStop()
         {
-            downloadTracker.RemoveListener(this);
+            _downloadTracker.RemoveListener(this);
             base.OnStop();
         }
 
         public void OnDownloadsChanged()
         {
-            sampleAdapter.NotifyDataSetChanged();
+            _sampleAdapter.NotifyDataSetChanged();
         }
 
         private void OnSampleGroups(List<SampleGroup> groups, bool sawError)
@@ -125,19 +124,19 @@ namespace Com.Google.Android.Exoplayer2.Demo
                     .Show();
             }
 
-            sampleAdapter.SetSampleGroups(groups);
+            _sampleAdapter.SetSampleGroups(groups);
         }
 
         public bool OnChildClick(ExpandableListView parent, View view, int groupPosition, int childPosition, long id)
         {
-            Sample sample = (Sample)view.GetTag(view.Id);
+            var sample = (Sample)view.GetTag(view.Id);
             StartActivity(sample.BuildIntent(this));
             return true;
         }
 
         private void OnSampleDownloadButtonClicked(Sample sample)
         {
-            int downloadUnsupportedstringId = GetDownloadUnsupportedstringId(sample);
+            var downloadUnsupportedstringId = GetDownloadUnsupportedstringId(sample);
             if (downloadUnsupportedstringId != 0)
             {
                 Toast.MakeText(ApplicationContext, downloadUnsupportedstringId, ToastLength.Long)
@@ -145,31 +144,31 @@ namespace Com.Google.Android.Exoplayer2.Demo
             }
             else
             {
-                UriSample uriSample = (UriSample)sample;
-                downloadTracker.ToggleDownload(this, sample.name, uriSample.uri, uriSample.extension);
+                var uriSample = (UriSample)sample;
+                _downloadTracker.ToggleDownload(this, sample.Name, uriSample.Uri, uriSample.Extension);
             }
         }
 
-        private int GetDownloadUnsupportedstringId(Sample sample)
+        private static int GetDownloadUnsupportedstringId(Sample sample)
         {
             if (sample is PlaylistSample)
             {
                 return Resource.String.download_playlist_unsupported;
             }
 
-            UriSample uriSample = (UriSample)sample;
+            var uriSample = (UriSample)sample;
 
-            if (uriSample.drmInfo != null)
+            if (uriSample.DrmInfo != null)
             {
                 return Resource.String.download_drm_unsupported;
             }
 
-            if (uriSample.adTagUri != null)
+            if (uriSample.AdTagUri != null)
             {
                 return Resource.String.download_ads_unsupported;
             }
 
-            string scheme = uriSample.uri.Scheme;
+            var scheme = uriSample.Uri.Scheme;
 
             if (!("http".Equals(scheme) || "https".Equals(scheme)))
             {
@@ -180,24 +179,24 @@ namespace Com.Google.Android.Exoplayer2.Demo
 
         private class SampleListLoader : AsyncTask<string, int, List<SampleGroup>>
         {
-            private SampleChooserActivity activity;
+            private readonly SampleChooserActivity _activity;
 
             public SampleListLoader(SampleChooserActivity activity)
             {
-                this.activity = activity;
+                _activity = activity;
             }
 
-            private bool sawError;
+            private bool _sawError;
 
             protected override List<SampleGroup> RunInBackground(params string[] uris)
             {
-                List<SampleGroup> result = new List<SampleGroup>();
-                Context context = activity.ApplicationContext;
-                string userAgent = Utils.GetUserAgent(context, "ExoPlayerDemo");
+                var result = new List<SampleGroup>();
+                var context = _activity.ApplicationContext;
+                var userAgent = Utils.GetUserAgent(context, "ExoPlayerDemo");
                 IDataSource dataSource = new DefaultDataSource(context, null, userAgent, false);
-                foreach (string uri in uris)
+                foreach (var uri in uris)
                 {
-                    DataSpec dataSpec = new DataSpec(android.Net.Uri.Parse(uri));
+                    var dataSpec = new DataSpec(android.Net.Uri.Parse(uri));
                     var inputStream = new DataSourceInputStream(dataSource, dataSpec);
                     var memory = new MemoryStream();
                     var buffer = new byte[1024];
@@ -214,8 +213,8 @@ namespace Com.Google.Android.Exoplayer2.Demo
                     }
                     catch (Exception e)
                     {
-                        Log.Error(TAG, "Error loading sample list: " + uri, e);
-                        sawError = true;
+                        Log.Error(Tag, "Error loading sample list: " + uri, e);
+                        _sawError = true;
                     }
                     finally
                     {
@@ -226,16 +225,17 @@ namespace Com.Google.Android.Exoplayer2.Demo
                 return result;
             }
 
+            // ReSharper disable once RedundantOverriddenMember
+            // This overload is required so that the following overload is also called?! ¯\_(ツ)_/¯
             protected override void OnPostExecute(Object result)
             {
                 base.OnPostExecute(result);
-                // This overload is required so that the following overload is also called?! ¯\_(ツ)_/¯
             }
 
             protected override void OnPostExecute(List<SampleGroup> result)
             {
                 base.OnPostExecute(result);
-                activity.OnSampleGroups(result, sawError);
+                _activity.OnSampleGroups(result, _sawError);
             }
 
             private void ReadSampleGroups(JsonReader reader, List<SampleGroup> groups)
@@ -250,13 +250,13 @@ namespace Com.Google.Android.Exoplayer2.Demo
 
             private void ReadSampleGroup(JsonReader reader, List<SampleGroup> groups)
             {
-                string groupName = "";
-                List<Sample> samples = new List<Sample>();
+                var groupName = "";
+                var samples = new List<Sample>();
 
                 reader.BeginObject();
                 while (reader.HasNext)
                 {
-                    string name = reader.NextName();
+                    var name = reader.NextName();
                     switch (name)
                     {
                         case "name":
@@ -279,11 +279,11 @@ namespace Com.Google.Android.Exoplayer2.Demo
                 }
                 reader.EndObject();
 
-                SampleGroup group = getGroup(groupName, groups);
-                group.samples.AddRange(samples);
+                var group = GetGroup(groupName, groups);
+                group.Samples.AddRange(samples);
             }
 
-            private Sample ReadEntry(JsonReader reader, bool insidePlaylist)
+            private static Sample ReadEntry(JsonReader reader, bool insidePlaylist)
             {
                 string sampleName = null;
                 android.Net.Uri uri = null;
@@ -292,8 +292,8 @@ namespace Com.Google.Android.Exoplayer2.Demo
                 string drmLicenseUrl = null;
                 string[]
                 drmKeyRequestProperties = null;
-                bool drmMultiSession = false;
-                bool preferExtensionDecoders = false;
+                var drmMultiSession = false;
+                var preferExtensionDecoders = false;
                 List<UriSample> playlistSamples = null;
                 string adTagUri = null;
                 string abrAlgorithm = null;
@@ -301,7 +301,7 @@ namespace Com.Google.Android.Exoplayer2.Demo
                 reader.BeginObject();
                 while (reader.HasNext)
                 {
-                    string name = reader.NextName();
+                    var name = reader.NextName();
                     switch (name)
                     {
                         case "name":
@@ -325,7 +325,7 @@ namespace Com.Google.Android.Exoplayer2.Demo
                         case "drm_key_request_properties":
                             Assertions.CheckState(!insidePlaylist,
                                 "Invalid attribute on nested item: drm_key_request_properties");
-                            List<string> drmKeyRequestPropertiesList = new List<string>();
+                            var drmKeyRequestPropertiesList = new List<string>();
                             reader.BeginObject();
                             while (reader.HasNext)
                             {
@@ -366,13 +366,13 @@ namespace Com.Google.Android.Exoplayer2.Demo
                     }
                 }
                 reader.EndObject();
-                DrmInfo drmInfo =
+                var drmInfo =
                       drmScheme == null
                           ? null
                           : new DrmInfo(drmScheme, drmLicenseUrl, drmKeyRequestProperties, drmMultiSession);
                 if (playlistSamples != null)
                 {
-                    UriSample[] playlistSamplesArray = playlistSamples.ToArray();
+                    var playlistSamplesArray = playlistSamples.ToArray();
                     return new PlaylistSample(
                         sampleName, preferExtensionDecoders, abrAlgorithm, drmInfo, playlistSamplesArray);
                 }
@@ -383,16 +383,16 @@ namespace Com.Google.Android.Exoplayer2.Demo
                 }
             }
 
-            private SampleGroup getGroup(string groupName, List<SampleGroup> groups)
+            private SampleGroup GetGroup(string groupName, List<SampleGroup> groups)
             {
-                for (int i = 0; i < groups.Count; i++)
+                foreach (var t in groups)
                 {
-                    if (Utils.AreEqual(groupName, groups[i].title))
+                    if (Utils.AreEqual(groupName, t.Title))
                     {
-                        return groups[i];
+                        return t;
                     }
                 }
-                SampleGroup group = new SampleGroup(groupName);
+                var group = new SampleGroup(groupName);
                 groups.Add(group);
                 return group;
             }
@@ -400,24 +400,24 @@ namespace Com.Google.Android.Exoplayer2.Demo
 
         internal class SampleAdapter : BaseExpandableListAdapter, View.IOnClickListener
         {
-            SampleChooserActivity activity;
-            private List<SampleGroup> sampleGroups;
+            readonly SampleChooserActivity _activity;
+            private List<SampleGroup> _sampleGroups;
 
             public SampleAdapter(SampleChooserActivity activity)
             {
-                this.activity = activity;
-                sampleGroups = new List<SampleGroup>();
+                _activity = activity;
+                _sampleGroups = new List<SampleGroup>();
             }
 
             public void SetSampleGroups(List<SampleGroup> sampleGroups)
             {
-                this.sampleGroups = sampleGroups;
+                _sampleGroups = sampleGroups;
                 NotifyDataSetChanged();
             }
 
-            public override Java.Lang.Object GetChild(int groupPosition, int childPosition)
+            public override Object GetChild(int groupPosition, int childPosition)
             {
-                return ((SampleGroup)GetGroup(groupPosition)).samples[childPosition];
+                return ((SampleGroup)GetGroup(groupPosition)).Samples[childPosition];
             }
 
             public override long GetChildId(int groupPosition, int childPosition)
@@ -428,11 +428,11 @@ namespace Com.Google.Android.Exoplayer2.Demo
             public override View GetChildView(int groupPosition, int childPosition, bool isLastChild,
                 View convertView, ViewGroup parent)
             {
-                View view = convertView;
+                var view = convertView;
                 if (view == null)
                 {
-                    view = activity.LayoutInflater.Inflate(Resource.Layout.sample_list_item, parent, false);
-                    ImageView downloadButton = (ImageView)view.FindViewById(Resource.Id.download_button);
+                    view = _activity.LayoutInflater.Inflate(Resource.Layout.sample_list_item, parent, false);
+                    var downloadButton = (ImageView)view.FindViewById(Resource.Id.download_button);
                     downloadButton.SetOnClickListener(this);
                     //downloadButton.SetFocusable(ViewFocusability.NotFocusable);
 
@@ -444,12 +444,12 @@ namespace Com.Google.Android.Exoplayer2.Demo
 
             public override int GetChildrenCount(int groupPosition)
             {
-                return ((SampleGroup)GetGroup(groupPosition)).samples.Count;
+                return ((SampleGroup)GetGroup(groupPosition)).Samples.Count;
             }
 
             public override Object GetGroup(int groupPosition)
             {
-                return sampleGroups[groupPosition];
+                return _sampleGroups[groupPosition];
             }
 
             public override long GetGroupId(int groupPosition)
@@ -460,13 +460,9 @@ namespace Com.Google.Android.Exoplayer2.Demo
             public override View GetGroupView(int groupPosition, bool isExpanded, View convertView,
                 ViewGroup parent)
             {
-                View view = convertView;
-                if (view == null)
-                {
-                    view =
-                        activity.LayoutInflater.Inflate(android.Resource.Layout.SimpleExpandableListItem1, parent, false);
-                }
-              ((TextView)view).SetText(((SampleGroup)GetGroup(groupPosition)).title, TextView.BufferType.Normal);
+                var view = convertView ?? 
+                           _activity.LayoutInflater.Inflate(android.Resource.Layout.SimpleExpandableListItem1, parent, false);
+                ((TextView)view).SetText(((SampleGroup)GetGroup(groupPosition)).Title, TextView.BufferType.Normal);
                 return view;
             }
 
@@ -474,7 +470,7 @@ namespace Com.Google.Android.Exoplayer2.Demo
             {
                 get
                 {
-                    return sampleGroups.Count;
+                    return _sampleGroups.Count;
                 }
             }
 
@@ -493,18 +489,18 @@ namespace Com.Google.Android.Exoplayer2.Demo
 
             public void OnClick(View view)
             {
-                activity.OnSampleDownloadButtonClicked((Sample)view.GetTag(view.Id));
+                _activity.OnSampleDownloadButtonClicked((Sample)view.GetTag(view.Id));
             }
 
             private void InitializeChildView(View view, Sample sample)
             {
                 view.SetTag(view.Id, sample);
-                TextView sampleTitle = (TextView)view.FindViewById(Resource.Id.sample_title);
-                sampleTitle.SetText(sample.name, TextView.BufferType.Normal);
+                var sampleTitle = (TextView)view.FindViewById(Resource.Id.sample_title);
+                sampleTitle.SetText(sample.Name, TextView.BufferType.Normal);
 
-                bool canDownload = activity.GetDownloadUnsupportedstringId(sample) == 0;
-                bool isDownloaded = canDownload && activity.downloadTracker.IsDownloaded(((UriSample)sample).uri);
-                ImageButton downloadButton = (ImageButton)view.FindViewById(Resource.Id.download_button);
+                var canDownload = GetDownloadUnsupportedstringId(sample) == 0;
+                var isDownloaded = canDownload && _activity._downloadTracker.IsDownloaded(((UriSample)sample).Uri);
+                var downloadButton = (ImageButton)view.FindViewById(Resource.Id.download_button);
                 downloadButton.SetTag(downloadButton.Id, sample);
                 downloadButton.SetColorFilter(new Color((canDownload ? (isDownloaded ? int.Parse("FF42A5F5", System.Globalization.NumberStyles.HexNumber) : int.Parse("FFBDBDBD", System.Globalization.NumberStyles.HexNumber)) : int.Parse("FFEEEEEE", System.Globalization.NumberStyles.HexNumber))));
                 downloadButton.SetImageResource(
@@ -512,24 +508,24 @@ namespace Com.Google.Android.Exoplayer2.Demo
             }
         }
 
-        internal class SampleGroup : Java.Lang.Object
+        internal class SampleGroup : Object
         {
-            public string title;
-            public List<Sample> samples;
+            public string Title;
+            public List<Sample> Samples;
 
             public SampleGroup(string title)
             {
-                this.title = title;
-                this.samples = new List<Sample>();
+                Title = title;
+                Samples = new List<Sample>();
             }
         }
 
         internal class DrmInfo
         {
-            public string drmScheme;
-            public string drmLicenseUrl;
-            public string[] drmKeyRequestProperties;
-            public bool drmMultiSession;
+            public string DrmScheme;
+            public string DrmLicenseUrl;
+            public string[] DrmKeyRequestProperties;
+            public bool DrmMultiSession;
 
             public DrmInfo(
                 string drmScheme,
@@ -537,45 +533,45 @@ namespace Com.Google.Android.Exoplayer2.Demo
                 string[] drmKeyRequestProperties,
                 bool drmMultiSession)
             {
-                this.drmScheme = drmScheme;
-                this.drmLicenseUrl = drmLicenseUrl;
-                this.drmKeyRequestProperties = drmKeyRequestProperties;
-                this.drmMultiSession = drmMultiSession;
+                DrmScheme = drmScheme;
+                DrmLicenseUrl = drmLicenseUrl;
+                DrmKeyRequestProperties = drmKeyRequestProperties;
+                DrmMultiSession = drmMultiSession;
             }
 
-            public void updateIntent(Intent intent)
+            public void UpdateIntent(Intent intent)
             {
                 Assertions.CheckNotNull(intent);
-                intent.PutExtra(PlayerActivity.DRM_SCHEME_EXTRA, drmScheme);
-                intent.PutExtra(PlayerActivity.DRM_LICENSE_URL_EXTRA, drmLicenseUrl);
-                intent.PutExtra(PlayerActivity.DRM_KEY_REQUEST_PROPERTIES_EXTRA, drmKeyRequestProperties);
-                intent.PutExtra(PlayerActivity.DRM_MULTI_SESSION_EXTRA, drmMultiSession);
+                intent.PutExtra(PlayerActivity.DrmSchemeExtra, DrmScheme);
+                intent.PutExtra(PlayerActivity.DrmLicenseUrlExtra, DrmLicenseUrl);
+                intent.PutExtra(PlayerActivity.DrmKeyRequestPropertiesExtra, DrmKeyRequestProperties);
+                intent.PutExtra(PlayerActivity.DrmMultiSessionExtra, DrmMultiSession);
             }
         }
 
-        internal abstract class Sample : Java.Lang.Object
+        internal abstract class Sample : Object
         {
-            public string name;
-            public bool preferExtensionDecoders;
-            public string abrAlgorithm;
-            public DrmInfo drmInfo;
+            public string Name;
+            public bool PreferExtensionDecoders;
+            public string AbrAlgorithm;
+            public DrmInfo DrmInfo;
 
-            public Sample(string name, bool preferExtensionDecoders, string abrAlgorithm, DrmInfo drmInfo)
+            protected Sample(string name, bool preferExtensionDecoders, string abrAlgorithm, DrmInfo drmInfo)
             {
-                this.name = name;
-                this.preferExtensionDecoders = preferExtensionDecoders;
-                this.abrAlgorithm = abrAlgorithm;
-                this.drmInfo = drmInfo;
+                Name = name;
+                PreferExtensionDecoders = preferExtensionDecoders;
+                AbrAlgorithm = abrAlgorithm;
+                DrmInfo = drmInfo;
             }
 
             public virtual Intent BuildIntent(Context context)
             {
-                Intent intent = new Intent(context, Class.FromType(typeof(PlayerActivity)));
-                intent.PutExtra(PlayerActivity.PREFER_EXTENSION_DECODERS_EXTRA, preferExtensionDecoders);
-                intent.PutExtra(PlayerActivity.ABR_ALGORITHM_EXTRA, abrAlgorithm);
-                if (drmInfo != null)
+                var intent = new Intent(context, Class.FromType(typeof(PlayerActivity)));
+                intent.PutExtra(PlayerActivity.PreferExtensionDecodersExtra, PreferExtensionDecoders);
+                intent.PutExtra(PlayerActivity.AbrAlgorithmExtra, AbrAlgorithm);
+                if (DrmInfo != null)
                 {
-                    drmInfo.updateIntent(intent);
+                    DrmInfo.UpdateIntent(intent);
                 }
                 return intent;
             }
@@ -583,9 +579,9 @@ namespace Com.Google.Android.Exoplayer2.Demo
 
         internal class UriSample : Sample
         {
-            public android.Net.Uri uri;
-            public string extension;
-            public string adTagUri;
+            public android.Net.Uri Uri;
+            public string Extension;
+            public string AdTagUri;
 
             public UriSample(
                 string name,
@@ -596,24 +592,24 @@ namespace Com.Google.Android.Exoplayer2.Demo
                 string extension,
                 string adTagUri) : base(name, preferExtensionDecoders, abrAlgorithm, drmInfo)
             {
-                this.uri = uri;
-                this.extension = extension;
-                this.adTagUri = adTagUri;
+                Uri = uri;
+                Extension = extension;
+                AdTagUri = adTagUri;
             }
 
             public override Intent BuildIntent(Context context)
             {
                 return base.BuildIntent(context)
-                    .SetData(uri)
-                    .PutExtra(PlayerActivity.EXTENSION_EXTRA, extension)
-                    .PutExtra(PlayerActivity.AD_TAG_URI_EXTRA, adTagUri)
-                    .SetAction(PlayerActivity.ACTION_VIEW);
+                    .SetData(Uri)
+                    .PutExtra(PlayerActivity.ExtensionExtra, Extension)
+                    .PutExtra(PlayerActivity.AdTagUriExtra, AdTagUri)
+                    .SetAction(PlayerActivity.ActionView);
             }
         }
 
         internal class PlaylistSample : Sample
         {
-            public readonly UriSample[] children;
+            public readonly UriSample[] Children;
 
             public PlaylistSample(
                 string name,
@@ -622,22 +618,22 @@ namespace Com.Google.Android.Exoplayer2.Demo
                 DrmInfo drmInfo,
                 params UriSample[] children) : base(name, preferExtensionDecoders, abrAlgorithm, drmInfo)
             {
-                this.children = children;
+                Children = children;
             }
 
             public override Intent BuildIntent(Context context)
             {
-                string[] uris = new string[children.Length];
-                string[] extensions = new string[children.Length];
-                for (int i = 0; i < children.Length; i++)
+                var uris = new string[Children.Length];
+                var extensions = new string[Children.Length];
+                for (var i = 0; i < Children.Length; i++)
                 {
-                    uris[i] = children[i].uri.ToString();
-                    extensions[i] = children[i].extension;
+                    uris[i] = Children[i].Uri.ToString();
+                    extensions[i] = Children[i].Extension;
                 }
                 return base.BuildIntent(context)
-                    .PutExtra(PlayerActivity.URI_LIST_EXTRA, uris)
-                    .PutExtra(PlayerActivity.EXTENSION_LIST_EXTRA, extensions)
-                    .SetAction(PlayerActivity.ACTION_VIEW_LIST);
+                    .PutExtra(PlayerActivity.UriListExtra, uris)
+                    .PutExtra(PlayerActivity.ExtensionListExtra, extensions)
+                    .SetAction(PlayerActivity.ActionViewList);
             }
         }
     }

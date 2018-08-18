@@ -20,7 +20,6 @@ using Com.Google.Android.Exoplayer2.Offline;
 using Com.Google.Android.Exoplayer2.Source.Dash.Offline;
 using Com.Google.Android.Exoplayer2.Source.Hls.Offline;
 using Com.Google.Android.Exoplayer2.Source.Smoothstreaming.Offline;
-using static Com.Google.Android.Exoplayer2.Offline.DownloadAction;
 using Utils = Com.Google.Android.Exoplayer2.Util.Util;
 using Com.Google.Android.Exoplayer2.Upstream;
 using Com.Google.Android.Exoplayer2.Upstream.Cache;
@@ -36,24 +35,24 @@ namespace Com.Google.Android.Exoplayer2.Demo
      [Application]
     public class DemoApplication : Application
     {
-        private const string DOWNLOAD_ACTION_FILE = "actions";
-        private const string DOWNLOAD_TRACKER_ACTION_FILE = "tracked_actions";
-        private const string DOWNLOAD_CONTENT_DIRECTORY = "downloads";
-        private const int MAX_SIMULTANEOUS_DOWNLOADS = 2;
-        private Deserializer[] DOWNLOAD_DESERIALIZERS =
-          new Deserializer[] {
+        private const string DownloadActionFile = "actions";
+        private const string DownloadTrackerActionFile = "tracked_actions";
+        private const string DownloadContentDirectory = "downloads";
+        private const int MaxSimultaneousDownloads = 2;
+        private readonly DownloadAction.Deserializer[] _downloadDeserializers =
+          {
             DashDownloadAction.Deserializer,
             HlsDownloadAction.Deserializer,
             SsDownloadAction.Deserializer,
             ProgressiveDownloadAction.Deserializer
         };
 
-        protected string userAgent;
+        protected string UserAgent;
 
-        private File downloadDirectory;
-        private ICache downloadCache;
-        private Offline.DownloadManager downloadManager;
-        private DownloadTracker downloadTracker;
+        private File _downloadDirectory;
+        private ICache _downloadCache;
+        private Offline.DownloadManager _downloadManager;
+        private DownloadTracker _downloadTracker;
 
         public DemoApplication(IntPtr javaReference, JniHandleOwnership transfer) : base(javaReference, transfer)
         {
@@ -66,13 +65,13 @@ namespace Com.Google.Android.Exoplayer2.Demo
         public override void OnCreate()
         {
             base.OnCreate();
-            userAgent = Utils.GetUserAgent(this, "ExoPlayerDemo");
+            UserAgent = Utils.GetUserAgent(this, "ExoPlayerDemo");
         }
 
         /** Returns a {@link DataSource.Factory}. */
         public IDataSourceFactory BuildDataSourceFactory(ITransferListener listener)
         {
-            DefaultDataSourceFactory upstreamFactory = new DefaultDataSourceFactory(this, listener, BuildHttpDataSourceFactory(listener));
+            var upstreamFactory = new DefaultDataSourceFactory(this, listener, BuildHttpDataSourceFactory(listener));
 
             return BuildReadOnlyCacheDataSource(upstreamFactory, GetDownloadCache());
         }
@@ -80,7 +79,7 @@ namespace Com.Google.Android.Exoplayer2.Demo
         /** Returns a {@link HttpDataSource.Factory}. */
         public IHttpDataSourceFactory BuildHttpDataSourceFactory(ITransferListener listener)
         {
-            return new DefaultHttpDataSourceFactory(userAgent, listener);
+            return new DefaultHttpDataSourceFactory(UserAgent, listener);
         }
 
         /** Returns whether extension renderers should be used. */
@@ -92,13 +91,13 @@ namespace Com.Google.Android.Exoplayer2.Demo
         public Offline.DownloadManager GetDownloadManager()
         {
             InitDownloadManager();
-            return downloadManager;
+            return _downloadManager;
         }
 
         public DownloadTracker GetDownloadTracker()
         {
             InitDownloadManager();
-            return downloadTracker;
+            return _downloadTracker;
 
         }
 
@@ -108,28 +107,26 @@ namespace Com.Google.Android.Exoplayer2.Demo
         {
             lock (_lock)
             {
-                if (downloadManager == null)
-                {
-                    DownloaderConstructorHelper downloaderConstructorHelper = new DownloaderConstructorHelper(
-                        GetDownloadCache(),
-                        BuildHttpDataSourceFactory(/* listener= */ null));
+                if (_downloadManager != null) return;
+                var downloaderConstructorHelper = new DownloaderConstructorHelper(
+                    GetDownloadCache(),
+                    BuildHttpDataSourceFactory(/* listener= */ null));
 
-                    downloadManager =
-                        new Offline.DownloadManager(
-                            downloaderConstructorHelper,
-                            MAX_SIMULTANEOUS_DOWNLOADS,
-                            Offline.DownloadManager.DefaultMinRetryCount,
-                            new File(GetDownloadDirectory(), DOWNLOAD_ACTION_FILE),
-                            DOWNLOAD_DESERIALIZERS);
+                _downloadManager =
+                    new Offline.DownloadManager(
+                        downloaderConstructorHelper,
+                        MaxSimultaneousDownloads,
+                        Offline.DownloadManager.DefaultMinRetryCount,
+                        new File(GetDownloadDirectory(), DownloadActionFile),
+                        _downloadDeserializers);
 
-                    downloadTracker =
-                        new DownloadTracker(
-                            /* context= */ this,
-                            BuildDataSourceFactory(/* listener= */ null),
-                            new File(GetDownloadDirectory(), DOWNLOAD_TRACKER_ACTION_FILE),
-                            DOWNLOAD_DESERIALIZERS);
-                    downloadManager.AddListener(downloadTracker);
-                }
+                _downloadTracker =
+                    new DownloadTracker(
+                        /* context= */ this,
+                        BuildDataSourceFactory(/* listener= */ null),
+                        new File(GetDownloadDirectory(), DownloadTrackerActionFile),
+                        _downloadDeserializers);
+                _downloadManager.AddListener(_downloadTracker);
             }
         }
 
@@ -137,31 +134,23 @@ namespace Com.Google.Android.Exoplayer2.Demo
         {
             lock (_lock)
             {
-                if (downloadCache == null)
-                {
-                    File downloadContentDirectory = new File(GetDownloadDirectory(), DOWNLOAD_CONTENT_DIRECTORY);
-                    downloadCache = new SimpleCache(downloadContentDirectory, new NoOpCacheEvictor());
-                }
+                if (_downloadCache != null) return _downloadCache;
+                var downloadContentDirectory = new File(GetDownloadDirectory(), DownloadContentDirectory);
+                _downloadCache = new SimpleCache(downloadContentDirectory, new NoOpCacheEvictor());
             }
-            return downloadCache;
+            return _downloadCache;
 
         }
 
         private File GetDownloadDirectory()
         {
-            if (downloadDirectory == null)
-            {
-                downloadDirectory = android.OS.Environment.ExternalStorageDirectory;
-                if (downloadDirectory == null)
-                {
-                    downloadDirectory = this.FilesDir;
-                }
-            }
-            return downloadDirectory;
+            if (_downloadDirectory != null) return _downloadDirectory;
+            _downloadDirectory = android.OS.Environment.ExternalStorageDirectory ?? FilesDir;
+            return _downloadDirectory;
         }
 
         private static CacheDataSourceFactory BuildReadOnlyCacheDataSource(
-            DefaultDataSourceFactory upstreamFactory, ICache cache)
+            IDataSourceFactory upstreamFactory, ICache cache)
         {
             return new CacheDataSourceFactory(
                 cache,

@@ -1,5 +1,18 @@
 [
   {
+    "name": "Eternet",
+    "samples": [
+      {
+        "name": "Fox Sports Premium",
+        "uri": "http://localhost:4022/rtp/237.1.1.4:1234"
+      },
+      {
+        "name": "Tyc Sports",
+        "uri": "http://localhost:4022/rtp/237.1.1.6:1234"
+      }
+    ]
+  },
+  {
     "name": "YouTube DASH",
     "samples": [
       {

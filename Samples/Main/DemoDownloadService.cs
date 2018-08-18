@@ -21,26 +21,26 @@ using Android.Util;
 using Com.Google.Android.Exoplayer2.Scheduler;
 using Com.Google.Android.Exoplayer2.UI;
 using Com.Google.Android.Exoplayer2.Util;
-using static Com.Google.Android.Exoplayer2.Offline.DownloadManager;
 using Com.Google.Android.Exoplayer2.Offline;
 using Utils = Com.Google.Android.Exoplayer2.Util.Util;
 using Android.Runtime;
 using System;
 using Java.Interop;
+using DownloadManager = Com.Google.Android.Exoplayer2.Offline.DownloadManager;
 
 namespace Com.Google.Android.Exoplayer2.Demo
 {
     /** A service for downloading media. */
     [Service(Exported = false, Name = "com.google.android.exoplayer2.demo.DemoDownloadService")]
-    [IntentFilter(actions: new string[] { "com.google.android.exoplayer.downloadService.action.INIT" }, Categories = new string[] { "android.intent.category.DEFAULT" })]
+    [IntentFilter(actions: new[] { "com.google.android.exoplayer.downloadService.action.INIT" }, Categories = new[] { "android.intent.category.DEFAULT" })]
     public class DemoDownloadService : DownloadService
     {
-        public static readonly string CHANNEL_ID = "download_channel";
-        private static readonly int JOB_ID = 1;
-        public static readonly int FOREGROUND_NOTIFICATION_ID = 1;
+        public static readonly string ChannelId = "download_channel";
+        private static readonly int JobId = 1;
+        public static readonly int ForegroundNotificationId = 1;
 
         [Export(SuperArgumentsString = "1, 1000, \"download_channel\", 2131427508")]
-        public DemoDownloadService() : this (FOREGROUND_NOTIFICATION_ID, DefaultForegroundNotificationUpdateInterval, CHANNEL_ID, Resource.String.exo_download_notification_channel_name)
+        public DemoDownloadService() : this (ForegroundNotificationId, DefaultForegroundNotificationUpdateInterval, ChannelId, Resource.String.exo_download_notification_channel_name)
         {
         }
 
@@ -72,7 +72,7 @@ namespace Com.Google.Android.Exoplayer2.Demo
         {
             get
             {
-                return Utils.SdkInt >= 21 ? new PlatformScheduler(this, JOB_ID) : null;
+                return Utils.SdkInt >= 21 ? new PlatformScheduler(this, JobId) : null;
             }
         }
 
@@ -95,21 +95,21 @@ namespace Com.Google.Android.Exoplayer2.Demo
 
         protected PlatformScheduler GetScheduler()
         {
-            return Utils.SdkInt >= 21 ? new PlatformScheduler(this, JOB_ID) : null;
+            return Utils.SdkInt >= 21 ? new PlatformScheduler(this, JobId) : null;
         }
 
-        protected override Notification GetForegroundNotification(TaskState[] taskStates)
+        protected override Notification GetForegroundNotification(DownloadManager.TaskState[] taskStates)
         {
             return DownloadNotificationUtil.BuildProgressNotification(
                 /* context= */ this,
                 Resource.Drawable.exo_controls_play,
-                CHANNEL_ID,
+                ChannelId,
                 /* contentIntent= */ null,
                 /* message= */ null,
                 taskStates);
         }
 
-        protected override void OnTaskStateChanged(TaskState taskState)
+        protected override void OnTaskStateChanged(DownloadManager.TaskState taskState)
         {
             if (taskState.Action.IsRemoveAction)
             {
@@ -117,30 +117,30 @@ namespace Com.Google.Android.Exoplayer2.Demo
             }
             Notification notification = null;
 
-            byte[] bytes = new byte[taskState.Action.Data.Count];
+            var bytes = new byte[taskState.Action.Data.Count];
             taskState.Action.Data.CopyTo(bytes, 0);
 
-            if (taskState.State == TaskState.StateCompleted)
+            if (taskState.State == DownloadManager.TaskState.StateCompleted)
             {
                 notification =
                     DownloadNotificationUtil.BuildDownloadCompletedNotification(
                         /* context= */ this,
                         Resource.Drawable.exo_controls_play,
-                        CHANNEL_ID,
+                        ChannelId,
                         /* contentIntent= */ null,
                         Utils.FromUtf8Bytes(bytes));
             }
-            else if (taskState.State == TaskState.StateFailed)
+            else if (taskState.State == DownloadManager.TaskState.StateFailed)
             {
                 notification =
                     DownloadNotificationUtil.BuildDownloadFailedNotification(
                         /* context= */ this,
                         Resource.Drawable.exo_controls_play,
-                        CHANNEL_ID,
+                        ChannelId,
                         /* contentIntent= */ null,
                        Utils.FromUtf8Bytes(bytes));
             }
-            int notificationId = FOREGROUND_NOTIFICATION_ID + 1 + taskState.TaskId;
+            var notificationId = ForegroundNotificationId + 1 + taskState.TaskId;
             NotificationUtil.SetNotification(this, notificationId, notification);
         }
     }

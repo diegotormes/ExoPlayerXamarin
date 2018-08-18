@@ -29,17 +29,16 @@ using Utils = Com.Google.Android.Exoplayer2.Util.Util;
 using Java.IO;
 using Android.Util;
 using android = Android;
-using static Com.Google.Android.Exoplayer2.Offline.DownloadManager;
-using Com.Google.Android.Exoplayer2.Source;
 using Java.Lang;
 using Com.Google.Android.Exoplayer2.Source.Dash.Offline;
 using Com.Google.Android.Exoplayer2.Source.Smoothstreaming.Offline;
 using Com.Google.Android.Exoplayer2.Source.Hls.Offline;
 using System.Linq;
+using DownloadManager = Com.Google.Android.Exoplayer2.Offline.DownloadManager;
 
 namespace Com.Google.Android.Exoplayer2.Demo
 {
-    public class DownloadTracker : Java.Lang.Object, IListener
+    public class DownloadTracker : Java.Lang.Object, DownloadManager.IListener
     {
         /** Listens for changes in the tracked downloads. */
         public interface IListener
@@ -48,22 +47,22 @@ namespace Com.Google.Android.Exoplayer2.Demo
             void OnDownloadsChanged();
         }
 
-        private const string TAG = "DownloadTracker";
+        private const string Tag = "DownloadTracker";
 
-        private Context context;
-        private IDataSourceFactory dataSourceFactory;
-        private ITrackNameProvider trackNameProvider;
-        private List<IListener> listeners;
-        private Dictionary<string, DownloadAction> trackedDownloadStates;
-        private ActionFile actionFile;
-        private Handler actionFileWriteHandler;
+        private readonly Context _context;
+        private readonly IDataSourceFactory _dataSourceFactory;
+        private readonly ITrackNameProvider _trackNameProvider;
+        private readonly List<IListener> _listeners;
+        private readonly Dictionary<string, DownloadAction> _trackedDownloadStates;
+        private readonly ActionFile _actionFile;
+        private readonly Handler _actionFileWriteHandler;
 
-        internal Context Context { get { return context; } }
+        internal Context Context { get { return _context; } }
         internal ITrackNameProvider TrackNameProvider
         {
             get
             {
-                return trackNameProvider;
+                return _trackNameProvider;
             }
         }
 
@@ -73,44 +72,44 @@ namespace Com.Google.Android.Exoplayer2.Demo
             File actionFile,
             DownloadAction.Deserializer[] deserializers)
         {
-            this.context = context.ApplicationContext;
-            this.dataSourceFactory = dataSourceFactory;
-            this.actionFile = new ActionFile(actionFile);
-            trackNameProvider = new DefaultTrackNameProvider(context.Resources);
-            listeners = new List<IListener>();
-            trackedDownloadStates = new Dictionary<string, DownloadAction>();
-            HandlerThread actionFileWriteThread = new HandlerThread("DownloadTracker");
+            _context = context.ApplicationContext;
+            _dataSourceFactory = dataSourceFactory;
+            _actionFile = new ActionFile(actionFile);
+            _trackNameProvider = new DefaultTrackNameProvider(context.Resources);
+            _listeners = new List<IListener>();
+            _trackedDownloadStates = new Dictionary<string, DownloadAction>();
+            var actionFileWriteThread = new HandlerThread("DownloadTracker");
             actionFileWriteThread.Start();
-            actionFileWriteHandler = new Handler(actionFileWriteThread.Looper);
+            _actionFileWriteHandler = new Handler(actionFileWriteThread.Looper);
             LoadTrackedActions(deserializers);
         }
 
         public void AddListener(IListener listener)
         {
-            listeners.Add(listener);
+            _listeners.Add(listener);
         }
 
         public void RemoveListener(IListener listener)
         {
-            listeners.Remove(listener);
+            _listeners.Remove(listener);
         }
 
         public bool IsDownloaded(android.Net.Uri uri)
         {
-            return trackedDownloadStates.ContainsKey(uri.ToString());
+            return _trackedDownloadStates.ContainsKey(uri.ToString());
         }
 
         public List<object> GetOfflineStreamKeys(android.Net.Uri uri)
         {
-            if (!trackedDownloadStates.ContainsKey(uri.ToString()))
+            if (!_trackedDownloadStates.ContainsKey(uri.ToString()))
             {
                 return new List<object>();
             }
-            DownloadAction action = trackedDownloadStates[uri.ToString()];
+            var action = _trackedDownloadStates[uri.ToString()];
 
             if (action is SegmentDownloadAction)
             {
-                List<object> objs = new List<object>(((SegmentDownloadAction)action).Keys.ToArray());
+                var objs = new List<object>(((SegmentDownloadAction)action).Keys.ToArray());
 
                 return objs;
             }
@@ -122,14 +121,14 @@ namespace Com.Google.Android.Exoplayer2.Demo
         {
             if (IsDownloaded(uri))
             {
-                DownloadAction removeAction =
+                var removeAction =
                     GetDownloadHelper(uri, extension).GetRemoveAction(Utils.GetUtf8Bytes(name));
 
                 StartServiceWithAction(removeAction);
             }
             else
             {
-                StartDownloadDialogHelper helper = new StartDownloadDialogHelper(activity, GetDownloadHelper(uri, extension), this, name);
+                var helper = new StartDownloadDialogHelper(activity, GetDownloadHelper(uri, extension), this, name);
                 helper.Prepare();
             }
         }
@@ -141,15 +140,15 @@ namespace Com.Google.Android.Exoplayer2.Demo
             // Do nothing.
         }
 
-        public void OnTaskStateChanged(Offline.DownloadManager downloadManager, TaskState taskState)
+        public void OnTaskStateChanged(Offline.DownloadManager downloadManager, DownloadManager.TaskState taskState)
         {
-            DownloadAction action = taskState.Action;
-            android.Net.Uri uri = action.Uri;
-            if ((action.IsRemoveAction && taskState.State == TaskState.StateCompleted)
-                || (!action.IsRemoveAction && taskState.State == TaskState.StateFailed))
+            var action = taskState.Action;
+            var uri = action.Uri;
+            if ((action.IsRemoveAction && taskState.State == DownloadManager.TaskState.StateCompleted)
+                || (!action.IsRemoveAction && taskState.State == DownloadManager.TaskState.StateFailed))
             {
                 // A download has been removed, or has failed. Stop tracking it.
-                if (trackedDownloadStates.Remove(uri.ToString()) != false)
+                if (_trackedDownloadStates.Remove(uri.ToString()) != false)
                 {
                     HandleTrackedDownloadStatesChanged();
                 }
@@ -167,69 +166,69 @@ namespace Com.Google.Android.Exoplayer2.Demo
         {
             try
             {
-                DownloadAction[] allActions = actionFile.Load(deserializers);
+                var allActions = _actionFile.Load(deserializers);
 
-                foreach (DownloadAction action in allActions)
+                foreach (var action in allActions)
                 {
-                    trackedDownloadStates[action.Uri.ToString()] = action;
+                    _trackedDownloadStates[action.Uri.ToString()] = action;
                 }
             }
             catch (IOException e)
             {
-                Log.Error(TAG, "Failed to load tracked actions", e);
+                Log.Error(Tag, "Failed to load tracked actions", e);
             }
         }
 
         private void HandleTrackedDownloadStatesChanged()
         {
-            foreach (IListener listener in listeners)
+            foreach (var listener in _listeners)
             {
                 listener.OnDownloadsChanged();
             }
 
-            DownloadAction[] actions = trackedDownloadStates.Select(aa => aa.Value).ToList().ToArray();
+            var actions = _trackedDownloadStates.Select(aa => aa.Value).ToList().ToArray();
 
-            actionFileWriteHandler.Post(new Action(() =>
+            _actionFileWriteHandler.Post(new Action(() =>
             {
                 try
                 {
-                    actionFile.Store(actions);
+                    _actionFile.Store(actions);
                 }
                 catch (IOException e)
                 {
-                    Log.Error(TAG, string.Format("Failed to store tracked actions\r\n{0}", e.ToString()), e);
+                    Log.Error(Tag, string.Format("Failed to store tracked actions\r\n{0}", e.ToString()), e);
                 }
             }));
         }
 
         internal void StartDownload(DownloadAction action)
         {
-            if (trackedDownloadStates.ContainsKey(action.Uri.ToString()))
+            if (_trackedDownloadStates.ContainsKey(action.Uri.ToString()))
             {
                 // This content is already being downloaded. Do nothing.
                 return;
             }
-            trackedDownloadStates[action.Uri.ToString()] = action;
+            _trackedDownloadStates[action.Uri.ToString()] = action;
             HandleTrackedDownloadStatesChanged();
             StartServiceWithAction(action);
         }
 
         private void StartServiceWithAction(DownloadAction action)
         {
-            DownloadService.StartWithAction(context, Java.Lang.Class.FromType(typeof(DemoDownloadService)), action, false);
+            DownloadService.StartWithAction(_context, Class.FromType(typeof(DemoDownloadService)), action, false);
         }
 
         private DownloadHelper GetDownloadHelper(android.Net.Uri uri, string extension)
         {
-            int type = Utils.InferContentType(uri, extension);
+            var type = Utils.InferContentType(uri, extension);
             switch (type)
             {
                 case C.TypeDash:
-                    return new DashDownloadHelper(uri, dataSourceFactory);
+                    return new DashDownloadHelper(uri, _dataSourceFactory);
                 case C.TypeSs:
-                    return new SsDownloadHelper(uri, dataSourceFactory);
+                    return new SsDownloadHelper(uri, _dataSourceFactory);
                 case C.TypeHls:
-                    return new HlsDownloadHelper(uri, dataSourceFactory);
+                    return new HlsDownloadHelper(uri, _dataSourceFactory);
                 case C.TypeOther:
                     return new ProgressiveDownloadHelper(uri);
                 default:
@@ -239,95 +238,95 @@ namespace Com.Google.Android.Exoplayer2.Demo
 
         internal class StartDownloadDialogHelper : Java.Lang.Object, DownloadHelper.ICallback, IDialogInterfaceOnClickListener
         {
-            private DownloadHelper downloadHelper;
-            private DownloadTracker downloadTracker;
-            private string name;
+            private readonly DownloadHelper _downloadHelper;
+            private readonly DownloadTracker _downloadTracker;
+            private readonly string _name;
 
-            private AlertDialog.Builder builder;
-            private View dialogView;
-            private List<TrackKey> trackKeys;
-            private ArrayAdapter<string> trackTitles;
-            private ListView representationList;
+            private readonly AlertDialog.Builder _builder;
+            private readonly View _dialogView;
+            private readonly List<TrackKey> _trackKeys;
+            private readonly ArrayAdapter<string> _trackTitles;
+            private readonly ListView _representationList;
 
             public StartDownloadDialogHelper(Activity activity, DownloadHelper downloadHelper, DownloadTracker downloadTracker, string name)
             {
-                this.downloadHelper = downloadHelper;
-                this.downloadTracker = downloadTracker;
-                this.name = name;
-                builder =
+                _downloadHelper = downloadHelper;
+                _downloadTracker = downloadTracker;
+                _name = name;
+                _builder =
                     new AlertDialog.Builder(activity)
                         .SetTitle(Resource.String.exo_download_description)
                         .SetPositiveButton(android.Resource.String.Ok, this)
                         .SetNegativeButton(android.Resource.String.Cancel, (IDialogInterfaceOnClickListener)null);
 
                 // Inflate with the builder's context to ensure the correct style is used.
-                LayoutInflater dialogInflater = LayoutInflater.From(builder.Context);
-                dialogView = dialogInflater.Inflate(Resource.Layout.start_download_dialog, null);
+                var dialogInflater = LayoutInflater.From(_builder.Context);
+                _dialogView = dialogInflater.Inflate(Resource.Layout.start_download_dialog, null);
 
-                trackKeys = new List<TrackKey>();
-                trackTitles = new ArrayAdapter<string>(builder.Context, android.Resource.Layout.SimpleListItemMultipleChoice);
+                _trackKeys = new List<TrackKey>();
+                _trackTitles = new ArrayAdapter<string>(_builder.Context, android.Resource.Layout.SimpleListItemMultipleChoice);
 
-                representationList = (ListView)dialogView.FindViewById(Resource.Id.representation_list);
-                representationList.ChoiceMode = ChoiceMode.Multiple;
-                representationList.Adapter = trackTitles;
+                _representationList = (ListView)_dialogView.FindViewById(Resource.Id.representation_list);
+                _representationList.ChoiceMode = ChoiceMode.Multiple;
+                _representationList.Adapter = _trackTitles;
             }
 
             public void Prepare()
             {
-                downloadHelper.Prepare(this);
+                _downloadHelper.Prepare(this);
             }
 
             public void OnPrepared(DownloadHelper helper)
             {
-                for (int i = 0; i < downloadHelper.PeriodCount; i++)
+                for (var i = 0; i < _downloadHelper.PeriodCount; i++)
                 {
-                    TrackGroupArray trackGroups = downloadHelper.GetTrackGroups(i);
-                    for (int j = 0; j < trackGroups.Length; j++)
+                    var trackGroups = _downloadHelper.GetTrackGroups(i);
+                    for (var j = 0; j < trackGroups.Length; j++)
                     {
-                        TrackGroup trackGroup = trackGroups.Get(j);
-                        for (int k = 0; k < trackGroup.Length; k++)
+                        var trackGroup = trackGroups.Get(j);
+                        for (var k = 0; k < trackGroup.Length; k++)
                         {
-                            trackKeys.Add(new TrackKey(i, j, k));
+                            _trackKeys.Add(new TrackKey(i, j, k));
 
-                            var trackNameProvider = downloadTracker.TrackNameProvider;
+                            var trackNameProvider = _downloadTracker.TrackNameProvider;
 
                             var trackName = trackNameProvider.GetTrackName(trackGroup.GetFormat(k));
 
-                            trackTitles.Add(trackName);
+                            _trackTitles.Add(trackName);
                         }
                     }
-                    if (trackKeys.Count != 0)
+                    if (_trackKeys.Count != 0)
                     {
-                        builder.SetView(dialogView);
+                        _builder.SetView(_dialogView);
                     }
-                    builder.Create().Show();
+                    _builder.Create().Show();
                 }
             }
 
             public void OnPrepareError(DownloadHelper helper, IOException e)
             {
                 Toast.MakeText(
-                       downloadTracker.Context.ApplicationContext, Resource.String.download_start_error, ToastLength.Long)
+                       _downloadTracker.Context.ApplicationContext, Resource.String.download_start_error, ToastLength.Long)
                     .Show();
             }
 
             public void OnClick(IDialogInterface dialog, int which)
             {
-                Java.Util.ArrayList selectedTrackKeys = new Java.Util.ArrayList();
-                for (int i = 0; i < representationList.ChildCount; i++)
+                var selectedTrackKeys = new Java.Util.ArrayList();
+                for (var i = 0; i < _representationList.ChildCount; i++)
                 {
-                    if (representationList.IsItemChecked(i))
+                    if (_representationList.IsItemChecked(i))
                     {
-                        selectedTrackKeys.Add(trackKeys[i]);
+                        selectedTrackKeys.Add(_trackKeys[i]);
                     }
                 }
-                if (!selectedTrackKeys.IsEmpty || trackKeys.Count == 0)
+                if (!selectedTrackKeys.IsEmpty || _trackKeys.Count == 0)
                 {
                     // We have selected keys, or we're dealing with single stream content.
-                    DownloadAction downloadAction =
-                        downloadHelper.GetDownloadAction(Utils.GetUtf8Bytes(name), selectedTrackKeys);
+                    var downloadAction =
+                        _downloadHelper.GetDownloadAction(Utils.GetUtf8Bytes(_name), selectedTrackKeys);
 
-                    downloadTracker.StartDownload(downloadAction);
+                    _downloadTracker.StartDownload(downloadAction);
                 }
             }
         }

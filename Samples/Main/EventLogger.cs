@@ -24,9 +24,7 @@ using Com.Google.Android.Exoplayer2.Metadata.Emsg;
 using Com.Google.Android.Exoplayer2.Metadata.Id3;
 using Com.Google.Android.Exoplayer2.Source;
 using Com.Google.Android.Exoplayer2.Trackselection;
-using Com.Google.Android.Exoplayer2.Upstream;
 using Com.Google.Android.Exoplayer2.Video;
-using Com.Google.Android.Exoplayer2.Analytics;
 using Java.IO;
 using Java.Text;
 using Java.Util;
@@ -43,109 +41,109 @@ namespace Com.Google.Android.Exoplayer2.Demo
         IVideoRendererEventListener, IMediaSourceEventListener, IDefaultDrmSessionEventListener, IMetadataOutput
     {
 
-        private const string TAG = "EventLogger";
-        private const int MAX_TIMELINE_ITEM_LINES = 3;
-        private static readonly NumberFormat TIME_FORMAT;
+        private const string Tag = "EventLogger";
+        private const int MaxTimelineItemLines = 3;
+        private static readonly NumberFormat TimeFormat;
         static EventLogger()
         {
-            TIME_FORMAT = NumberFormat.GetInstance(Locale.Us);
-            TIME_FORMAT.MinimumFractionDigits = 2;
-            TIME_FORMAT.MaximumFractionDigits = 2;
-            TIME_FORMAT.GroupingUsed = false;
+            TimeFormat = NumberFormat.GetInstance(Locale.Us);
+            TimeFormat.MinimumFractionDigits = 2;
+            TimeFormat.MaximumFractionDigits = 2;
+            TimeFormat.GroupingUsed = false;
         }
 
-        private readonly DefaultTrackSelector trackSelector;
-        private readonly Timeline.Window window;
-        private readonly Timeline.Period period;
-        private readonly long startTimeMs;
+        private readonly DefaultTrackSelector _trackSelector;
+        private readonly Timeline.Window _window;
+        private readonly Timeline.Period _period;
+        private readonly long _startTimeMs;
 
         public EventLogger(DefaultTrackSelector trackSelector)
         {
-            this.trackSelector = trackSelector;
-            window = new Timeline.Window();
-            period = new Timeline.Period();
-            startTimeMs = SystemClock.ElapsedRealtime();
+            _trackSelector = trackSelector;
+            _window = new Timeline.Window();
+            _period = new Timeline.Period();
+            _startTimeMs = SystemClock.ElapsedRealtime();
         }
 
         #region Player.EventListener
         public void OnLoadingChanged(bool isLoading)
         {
-            Log.Debug(TAG, "loading [" + isLoading + "]");
+            Log.Debug(Tag, "loading [" + isLoading + "]");
         }
 
         public void OnPlayerStateChanged(bool playWhenReady, int state)
         {
-            Log.Debug(TAG, "state [" + getSessionTimeString() + ", " + playWhenReady + ", "
-                + getStateString(state) + "]");
+            Log.Debug(Tag, "state [" + GetSessionTimeString() + ", " + playWhenReady + ", "
+                + GetStateString(state) + "]");
         }
 
         public void OnPositionDiscontinuity(int reason)
         {
-            Log.Debug(TAG, "discontinuity [" + getSessionTimeString() + ", " + reason + "]");
+            Log.Debug(Tag, "discontinuity [" + GetSessionTimeString() + ", " + reason + "]");
         }
 
         public void OnRepeatModeChanged(int repeatMode)
         {
-            Log.Debug(TAG, "repeatMode [" + getRepeatModeString(repeatMode) + "]");
+            Log.Debug(Tag, "repeatMode [" + GetRepeatModeString(repeatMode) + "]");
         }
 
         public void OnSeekProcessed()
         {
-            Log.Debug(TAG, "seek [" + getSessionTimeString() + "]");
+            Log.Debug(Tag, "seek [" + GetSessionTimeString() + "]");
         }
 
         public void OnShuffleModeEnabledChanged(bool enabled)
         {
-            Log.Debug(TAG, "shuffle [" + getSessionTimeString() + ", " + enabled + "]");
+            Log.Debug(Tag, "shuffle [" + GetSessionTimeString() + ", " + enabled + "]");
         }
 
         public void OnPlaybackParametersChanged(PlaybackParameters playbackParameters)
         {
-            Log.Debug(TAG, "playbackParameters " + String.Format(
+            Log.Debug(Tag, "playbackParameters " + String.Format(
                 "[speed=%.2f, pitch=%.2f]", playbackParameters.Speed, playbackParameters.Pitch));
         }
 
         public void OnTimelineChanged(Timeline timeline, Object manifest, int reason)
         {
-            int periodCount = timeline.PeriodCount;
-            int windowCount = timeline.WindowCount;
-            Log.Debug(TAG, "sourceInfo [periodCount=" + periodCount + ", windowCount=" + windowCount);
-            for (int i = 0; i < Math.Min(periodCount, MAX_TIMELINE_ITEM_LINES); i++)
+            var periodCount = timeline.PeriodCount;
+            var windowCount = timeline.WindowCount;
+            Log.Debug(Tag, "sourceInfo [periodCount=" + periodCount + ", windowCount=" + windowCount);
+            for (var i = 0; i < Math.Min(periodCount, MaxTimelineItemLines); i++)
             {
-                timeline.GetPeriod(i, period);
-                Log.Debug(TAG, "  " + "period [" + getTimeString(period.DurationMs) + "]");
+                timeline.GetPeriod(i, _period);
+                Log.Debug(Tag, "  " + "period [" + GetTimeString(_period.DurationMs) + "]");
             }
-            if (periodCount > MAX_TIMELINE_ITEM_LINES)
+            if (periodCount > MaxTimelineItemLines)
             {
-                Log.Debug(TAG, "  ...");
+                Log.Debug(Tag, "  ...");
             }
-            for (int i = 0; i < Math.Min(windowCount, MAX_TIMELINE_ITEM_LINES); i++)
+            for (var i = 0; i < Math.Min(windowCount, MaxTimelineItemLines); i++)
             {
-                timeline.GetWindow(i, window);
-                Log.Debug(TAG, "  " + "window [" + getTimeString(window.DurationMs) + ", "
-                    + window.IsSeekable + ", " + window.IsDynamic + "]");
+                timeline.GetWindow(i, _window);
+                Log.Debug(Tag, "  " + "window [" + GetTimeString(_window.DurationMs) + ", "
+                    + _window.IsSeekable + ", " + _window.IsDynamic + "]");
             }
-            if (windowCount > MAX_TIMELINE_ITEM_LINES)
+            if (windowCount > MaxTimelineItemLines)
             {
-                Log.Debug(TAG, "  ...");
+                Log.Debug(Tag, "  ...");
             }
-            Log.Debug(TAG, ", " + reason + "]");
+            Log.Debug(Tag, ", " + reason + "]");
         }
 
         public void OnPlayerError(ExoPlaybackException e)
         {
-            Log.Error(TAG, "playerFailed [" + getSessionTimeString() + "]", e);
+            Log.Error(Tag, "playerFailed [" + GetSessionTimeString() + "]", e);
         }
 
         public void OnTracksChanged(TrackGroupArray ignored, TrackSelectionArray trackSelections)
         {
-            var mappedTrackInfo = trackSelector.CurrentMappedTrackInfo;
+            var mappedTrackInfo = _trackSelector.CurrentMappedTrackInfo;
             if (mappedTrackInfo == null)
             {
-                Log.Debug(TAG, "Tracks []");
+                Log.Debug(Tag, "Tracks []");
                 return;
             }
-            Log.Debug(TAG, "Tracks [");
+            Log.Debug(Tag, "Tracks [");
             // Log tracks associated to renderers.
             for (var rendererIndex = 0; rendererIndex < mappedTrackInfo.Length; rendererIndex++)
             {
@@ -153,24 +151,24 @@ namespace Com.Google.Android.Exoplayer2.Demo
                 var trackSelection = trackSelections.Get(rendererIndex);
                 if (rendererTrackGroups.Length > 0)
                 {
-                    Log.Debug(TAG, "  Renderer:" + rendererIndex + " [");
-                    for (int groupIndex = 0; groupIndex < rendererTrackGroups.Length; groupIndex++)
+                    Log.Debug(Tag, "  Renderer:" + rendererIndex + " [");
+                    for (var groupIndex = 0; groupIndex < rendererTrackGroups.Length; groupIndex++)
                     {
-                        TrackGroup trackGroup = rendererTrackGroups.Get(groupIndex);
-                        var adaptiveSupport = getAdaptiveSupportString(trackGroup.Length,
+                        var trackGroup = rendererTrackGroups.Get(groupIndex);
+                        var adaptiveSupport = GetAdaptiveSupportString(trackGroup.Length,
                             mappedTrackInfo.GetAdaptiveSupport(rendererIndex, groupIndex, false));
-                        Log.Debug(TAG, "    Group:" + groupIndex + ", adaptive_supported=" + adaptiveSupport + " [");
-                        for (int trackIndex = 0; trackIndex < trackGroup.Length; trackIndex++)
+                        Log.Debug(Tag, "    Group:" + groupIndex + ", adaptive_supported=" + adaptiveSupport + " [");
+                        for (var trackIndex = 0; trackIndex < trackGroup.Length; trackIndex++)
                         {
-                            var status = getTrackStatusString(trackSelection, trackGroup, trackIndex);
-                            var formatSupport = getFormatSupportString(
+                            var status = GetTrackStatusString(trackSelection, trackGroup, trackIndex);
+                            var formatSupport = GetFormatSupportString(
                                 mappedTrackInfo.GetTrackSupport(rendererIndex, groupIndex, trackIndex));
 
-                            Log.Debug(TAG, "      " + status + " Track:" + trackIndex + ", "
+                            Log.Debug(Tag, "      " + status + " Track:" + trackIndex + ", "
                                 + Format.ToLogString(trackGroup.GetFormat(trackIndex))
                                 + ", supported=" + formatSupport);
                         }
-                        Log.Debug(TAG, "    ]");
+                        Log.Debug(Tag, "    ]");
                     }
                     // Log metadata for at most one of the tracks selected for the renderer.
                     if (trackSelection != null)
@@ -180,60 +178,60 @@ namespace Com.Google.Android.Exoplayer2.Demo
                             var metadata = trackSelection.GetFormat(selectionIndex).Metadata;
                             if (metadata != null)
                             {
-                                Log.Debug(TAG, "    Metadata [");
-                                printMetadata(metadata, "      ");
-                                Log.Debug(TAG, "    ]");
+                                Log.Debug(Tag, "    Metadata [");
+                                PrintMetadata(metadata, "      ");
+                                Log.Debug(Tag, "    ]");
                                 break;
                             }
                         }
                     }
-                    Log.Debug(TAG, "  ]");
+                    Log.Debug(Tag, "  ]");
                 }
             }
             // Log tracks not associated with a renderer.
-            TrackGroupArray unassociatedTrackGroups = mappedTrackInfo.UnmappedTrackGroups;
+            var unassociatedTrackGroups = mappedTrackInfo.UnmappedTrackGroups;
             if (unassociatedTrackGroups.Length > 0)
             {
-                Log.Debug(TAG, "  Renderer:None [");
-                for (int groupIndex = 0; groupIndex < unassociatedTrackGroups.Length; groupIndex++)
+                Log.Debug(Tag, "  Renderer:None [");
+                for (var groupIndex = 0; groupIndex < unassociatedTrackGroups.Length; groupIndex++)
                 {
-                    Log.Debug(TAG, "    Group:" + groupIndex + " [");
+                    Log.Debug(Tag, "    Group:" + groupIndex + " [");
                     var trackGroup = unassociatedTrackGroups.Get(groupIndex);
-                    for (int trackIndex = 0; trackIndex < trackGroup.Length; trackIndex++)
+                    for (var trackIndex = 0; trackIndex < trackGroup.Length; trackIndex++)
                     {
-                        var status = getTrackStatusString(false);
-                        var formatSupport = getFormatSupportString(
+                        var status = GetTrackStatusString(false);
+                        var formatSupport = GetFormatSupportString(
                             RendererCapabilities.FormatUnsupportedType);
-                        Log.Debug(TAG, "      " + status + " Track:" + trackIndex + ", "
+                        Log.Debug(Tag, "      " + status + " Track:" + trackIndex + ", "
                             + Format.ToLogString(trackGroup.GetFormat(trackIndex))
                             + ", supported=" + formatSupport);
                     }
-                    Log.Debug(TAG, "    ]");
+                    Log.Debug(Tag, "    ]");
                 }
-                Log.Debug(TAG, "  ]");
+                Log.Debug(Tag, "  ]");
             }
-            Log.Debug(TAG, "]");
+            Log.Debug(Tag, "]");
         }
         #endregion
 
         #region MetadataRenderer.Output
         public void OnMetadata(MetadataObj metadata)
         {
-            Log.Debug(TAG, "onMetadata [");
-            printMetadata(metadata, "  ");
-            Log.Debug(TAG, "]");
+            Log.Debug(Tag, "onMetadata [");
+            PrintMetadata(metadata, "  ");
+            Log.Debug(Tag, "]");
         }
         #endregion
 
         #region AudioRendererEventListener
         public void OnAudioEnabled(DecoderCounters counters)
         {
-            Log.Debug(TAG, "audioEnabled [" + getSessionTimeString() + "]");
+            Log.Debug(Tag, "audioEnabled [" + GetSessionTimeString() + "]");
         }
 
         public void OnAudioSessionId(int audioSessionId)
         {
-            Log.Debug(TAG, "audioSessionId [" + audioSessionId + "]");
+            Log.Debug(Tag, "audioSessionId [" + audioSessionId + "]");
         }
 
         public void OnAudioSinkUnderrun(int p0, long p1, long p2)
@@ -244,23 +242,23 @@ namespace Com.Google.Android.Exoplayer2.Demo
         public void OnAudioDecoderInitialized(string decoderName, long elapsedRealtimeMs,
             long initializationDurationMs)
         {
-            Log.Debug(TAG, "audioDecoderInitialized [" + getSessionTimeString() + ", " + decoderName + "]");
+            Log.Debug(Tag, "audioDecoderInitialized [" + GetSessionTimeString() + ", " + decoderName + "]");
         }
 
         public void OnAudioInputFormatChanged(Format format)
         {
-            Log.Debug(TAG, "audioFormatChanged [" + getSessionTimeString() + ", " + Format.ToLogString(format)
+            Log.Debug(Tag, "audioFormatChanged [" + GetSessionTimeString() + ", " + Format.ToLogString(format)
                 + "]");
         }
 
         public void OnAudioDisabled(DecoderCounters counters)
         {
-            Log.Debug(TAG, "audioDisabled [" + getSessionTimeString() + "]");
+            Log.Debug(Tag, "audioDisabled [" + GetSessionTimeString() + "]");
         }
 
         public void OnAudioTrackUnderrun(int bufferSize, long bufferSizeMs, long elapsedSinceLastFeedMs)
         {
-            printInternalError("audioTrackUnderrun [" + bufferSize + ", " + bufferSizeMs + ", "
+            PrintInternalError("audioTrackUnderrun [" + bufferSize + ", " + bufferSizeMs + ", "
                 + elapsedSinceLastFeedMs + "]", null);
         }
         #endregion
@@ -268,72 +266,72 @@ namespace Com.Google.Android.Exoplayer2.Demo
         #region VideoRendererEventListener
         public void OnVideoEnabled(DecoderCounters counters)
         {
-            Log.Debug(TAG, "videoEnabled [" + getSessionTimeString() + "]");
+            Log.Debug(Tag, "videoEnabled [" + GetSessionTimeString() + "]");
         }
 
         public void OnVideoDecoderInitialized(string decoderName, long elapsedRealtimeMs,
             long initializationDurationMs)
         {
-            Log.Debug(TAG, "videoDecoderInitialized [" + getSessionTimeString() + ", " + decoderName + "]");
+            Log.Debug(Tag, "videoDecoderInitialized [" + GetSessionTimeString() + ", " + decoderName + "]");
         }
 
         public void OnVideoInputFormatChanged(Format format)
         {
-            Log.Debug(TAG, "videoFormatChanged [" + getSessionTimeString() + ", " + Format.ToLogString(format)
+            Log.Debug(Tag, "videoFormatChanged [" + GetSessionTimeString() + ", " + Format.ToLogString(format)
                 + "]");
         }
 
         public void OnVideoDisabled(DecoderCounters counters)
         {
-            Log.Debug(TAG, "videoDisabled [" + getSessionTimeString() + "]");
+            Log.Debug(Tag, "videoDisabled [" + GetSessionTimeString() + "]");
         }
 
         public void OnDroppedFrames(int count, long elapsed)
         {
-            Log.Debug(TAG, "droppedFrames [" + getSessionTimeString() + ", " + count + "]");
+            Log.Debug(Tag, "droppedFrames [" + GetSessionTimeString() + ", " + count + "]");
         }
 
         public void OnVideoSizeChanged(int width, int height, int unappliedRotationDegrees,
             float pixelWidthHeightRatio)
         {
-            Log.Debug(TAG, "videoSizeChanged [" + width + ", " + height + "]");
+            Log.Debug(Tag, "videoSizeChanged [" + width + ", " + height + "]");
         }
 
         public void OnRenderedFirstFrame(Surface surface)
         {
-            Log.Debug(TAG, "renderedFirstFrame [" + surface + "]");
+            Log.Debug(Tag, "renderedFirstFrame [" + surface + "]");
         }
         #endregion
 
         #region DefaultDrmSessionManager.EventListener
         public void OnDrmSessionManagerError(Exception e)
         {
-            printInternalError("drmSessionManagerError", e);
+            PrintInternalError("drmSessionManagerError", e);
         }
 
         public void OnDrmKeysRestored()
         {
-            Log.Debug(TAG, "drmKeysRestored [" + getSessionTimeString() + "]");
+            Log.Debug(Tag, "drmKeysRestored [" + GetSessionTimeString() + "]");
         }
 
         public void OnDrmKeysRemoved()
         {
-            Log.Debug(TAG, "drmKeysRemoved [" + getSessionTimeString() + "]");
+            Log.Debug(Tag, "drmKeysRemoved [" + GetSessionTimeString() + "]");
         }
 
         public void OnDrmKeysLoaded()
         {
-            Log.Debug(TAG, "drmKeysLoaded [" + getSessionTimeString() + "]");
+            Log.Debug(Tag, "drmKeysLoaded [" + GetSessionTimeString() + "]");
         }
         #endregion
 
         #region Internal methods
-        private void printInternalError(string type, Exception e)
+        private void PrintInternalError(string type, Exception e)
         {
-            Log.Error(TAG, "internalError [" + getSessionTimeString() + ", " + type + "]", e);
+            Log.Error(Tag, "internalError [" + GetSessionTimeString() + ", " + type + "]", e);
         }
 
-        private void printMetadata(MetadataObj metadata, string prefix)
+        private void PrintMetadata(MetadataObj metadata, string prefix)
         {
             for (var i = 0; i < metadata.Length(); i++)
             {
@@ -341,62 +339,62 @@ namespace Com.Google.Android.Exoplayer2.Demo
                 if (entry is TextInformationFrame)
                 {
                     var textInformationFrame = (TextInformationFrame)entry;
-                    Log.Debug(TAG, prefix + String.Format("%s: value=%s", textInformationFrame.Id,
+                    Log.Debug(Tag, prefix + String.Format("%s: value=%s", textInformationFrame.Id,
                         textInformationFrame.Value));
                 }
                 else if (entry is UrlLinkFrame)
                 {
                     var urlLinkFrame = (UrlLinkFrame)entry;
-                    Log.Debug(TAG, prefix + String.Format("%s: url=%s", urlLinkFrame.Id, urlLinkFrame.Url));
+                    Log.Debug(Tag, prefix + String.Format("%s: url=%s", urlLinkFrame.Id, urlLinkFrame.Url));
                 }
                 else if (entry is PrivFrame)
                 {
                     var privFrame = (PrivFrame)entry;
-                    Log.Debug(TAG, prefix + String.Format("%s: owner=%s", PrivFrame.Id, privFrame.Owner));
+                    Log.Debug(Tag, prefix + String.Format("%s: owner=%s", PrivFrame.Id, privFrame.Owner));
                 }
                 else if (entry is GeobFrame)
                 {
                     var geobFrame = (GeobFrame)entry;
-                    Log.Debug(TAG, prefix + String.Format("%s: mimeType=%s, filename=%s, description=%s",
+                    Log.Debug(Tag, prefix + String.Format("%s: mimeType=%s, filename=%s, description=%s",
                         GeobFrame.Id, geobFrame.MimeType, geobFrame.Filename, geobFrame.Description));
                 }
                 else if (entry is ApicFrame)
                 {
                     var apicFrame = (ApicFrame)entry;
-                    Log.Debug(TAG, prefix + String.Format("%s: mimeType=%s, description=%s",
+                    Log.Debug(Tag, prefix + String.Format("%s: mimeType=%s, description=%s",
                         ApicFrame.Id, apicFrame.MimeType, apicFrame.Description));
                 }
                 else if (entry is CommentFrame)
                 {
                     var commentFrame = (CommentFrame)entry;
-                    Log.Debug(TAG, prefix + String.Format("%s: language=%s, description=%s", CommentFrame.Id,
+                    Log.Debug(Tag, prefix + String.Format("%s: language=%s, description=%s", CommentFrame.Id,
                         commentFrame.Language, commentFrame.Description));
                 }
                 else if (entry is Id3Frame)
                 {
                     var id3Frame = (Id3Frame)entry;
-                    Log.Debug(TAG, prefix + String.Format("%s", id3Frame.Id));
+                    Log.Debug(Tag, prefix + String.Format("%s", id3Frame.Id));
                 }
                 else if (entry is EventMessage)
                 {
-                    EventMessage eventMessage = (EventMessage)entry;
-                    Log.Debug(TAG, prefix + String.Format("EMSG: scheme=%s, id=%d, value=%s",
+                    var eventMessage = (EventMessage)entry;
+                    Log.Debug(Tag, prefix + String.Format("EMSG: scheme=%s, id=%d, value=%s",
                         eventMessage.SchemeIdUri, eventMessage.Id, eventMessage.Value));
                 }
             }
         }
 
-        private string getSessionTimeString()
+        private string GetSessionTimeString()
         {
-            return getTimeString(SystemClock.ElapsedRealtime() - startTimeMs);
+            return GetTimeString(SystemClock.ElapsedRealtime() - _startTimeMs);
         }
 
-        private static string getTimeString(long timeMs)
+        private static string GetTimeString(long timeMs)
         {
-            return timeMs == C.TimeUnset ? "?" : TIME_FORMAT.Format((timeMs) / 1000f);
+            return timeMs == C.TimeUnset ? "?" : TimeFormat.Format((timeMs) / 1000f);
         }
 
-        private static string getStateString(int state)
+        private static string GetStateString(int state)
         {
             switch (state)
             {
@@ -413,7 +411,7 @@ namespace Com.Google.Android.Exoplayer2.Demo
             }
         }
 
-        private static string getFormatSupportString(int formatSupport)
+        private static string GetFormatSupportString(int formatSupport)
         {
             switch (formatSupport)
             {
@@ -430,7 +428,7 @@ namespace Com.Google.Android.Exoplayer2.Demo
             }
         }
 
-        private static string getAdaptiveSupportString(int trackCount, int adaptiveSupport)
+        private static string GetAdaptiveSupportString(int trackCount, int adaptiveSupport)
         {
             if (trackCount < 2)
             {
@@ -449,19 +447,19 @@ namespace Com.Google.Android.Exoplayer2.Demo
             }
         }
 
-        private static string getTrackStatusString(ITrackSelection selection, TrackGroup group,
+        private static string GetTrackStatusString(ITrackSelection selection, TrackGroup group,
             int trackIndex)
         {
-            return getTrackStatusString(selection != null && selection.TrackGroup == group
+            return GetTrackStatusString(selection != null && selection.TrackGroup == group
                 && selection.IndexOf(trackIndex) != C.IndexUnset);
         }
 
-        private static string getTrackStatusString(bool enabled)
+        private static string GetTrackStatusString(bool enabled)
         {
             return enabled ? "[X]" : "[ ]";
         }
 
-        private static string getRepeatModeString(int repeatMode)
+        private static string GetRepeatModeString(int repeatMode)
         {
             switch (repeatMode)
             {
@@ -495,7 +493,7 @@ namespace Com.Google.Android.Exoplayer2.Demo
 
         public void OnLoadError(int windowIndex, MediaSourceMediaPeriodId mediaPeriodId, MediaSourceEventListenerLoadEventInfo loadEventInfo, MediaSourceEventListenerMediaLoadData mediaLoadData, IOException error, bool wasCanceled)
         {
-            printInternalError("loadError", error);
+            PrintInternalError("loadError", error);
         }
 
         public void OnLoadStarted(int windowIndex, MediaSourceMediaPeriodId mediaPeriodId, MediaSourceEventListenerLoadEventInfo loadEventInfo, MediaSourceEventListenerMediaLoadData mediaLoadData)
