@@ -20,12 +20,12 @@ namespace Com.Google.Android.Exoplayer2.CastDemo
     public class MainActivity : AppCompatActivity, IOnClickListener, PlayerManager.IQueuePositionListener
     {
 
-        private PlayerView localPlayerView;
-        private PlayerControlView castControlView;
-        private PlayerManager playerManager;
-        private RecyclerView mediaQueueList;
-        private MediaQueueListAdapter mediaQueueListAdapter;
-        private CastContext castContext;
+        private PlayerView _localPlayerView;
+        private PlayerControlView _castControlView;
+        private PlayerManager _playerManager;
+        private RecyclerView _mediaQueueList;
+        private MediaQueueListAdapter _mediaQueueListAdapter;
+        private CastContext _castContext;
 
         // Activity lifecycle methods.
 
@@ -33,22 +33,22 @@ namespace Com.Google.Android.Exoplayer2.CastDemo
         {
             base.OnCreate(savedInstanceState);
             //Getting the cast context later than onStart can cause device discovery not to take place.
-            castContext = CastContext.GetSharedInstance(this);
+            _castContext = CastContext.GetSharedInstance(this);
 
             SetContentView(Resource.Layout.main_activity);
 
-            localPlayerView = (PlayerView)FindViewById(Resource.Id.local_player_view);
-            localPlayerView.RequestFocus();
+            _localPlayerView = (PlayerView)FindViewById(Resource.Id.local_player_view);
+            _localPlayerView.RequestFocus();
 
-            castControlView = (PlayerControlView)FindViewById(Resource.Id.cast_control_view);
+            _castControlView = (PlayerControlView)FindViewById(Resource.Id.cast_control_view);
 
-            mediaQueueListAdapter = new MediaQueueListAdapter();
-            mediaQueueList = (RecyclerView)FindViewById(Resource.Id.sample_list);
-            mediaQueueList.SetLayoutManager(new LinearLayoutManager(this));
-            mediaQueueList.HasFixedSize = true;
+            _mediaQueueListAdapter = new MediaQueueListAdapter();
+            _mediaQueueList = (RecyclerView)FindViewById(Resource.Id.sample_list);
+            _mediaQueueList.SetLayoutManager(new LinearLayoutManager(this));
+            _mediaQueueList.HasFixedSize = true;
 
-            ItemTouchHelper helper = new ItemTouchHelper(new RecyclerViewCallback(playerManager, mediaQueueListAdapter));
-            helper.AttachToRecyclerView(mediaQueueList);
+            ItemTouchHelper helper = new ItemTouchHelper(new RecyclerViewCallback(_playerManager, _mediaQueueListAdapter));
+            helper.AttachToRecyclerView(_mediaQueueList);
 
             FindViewById(Resource.Id.add_sample_button).SetOnClickListener(this);
         }
@@ -64,17 +64,17 @@ namespace Com.Google.Android.Exoplayer2.CastDemo
         protected override void OnResume()
         {
             base.OnResume();
-            playerManager = PlayerManager.CreatePlayerManager(this, localPlayerView, castControlView, this, castContext);
-            mediaQueueListAdapter.PlayerManager = playerManager;
-            mediaQueueList.SetAdapter(mediaQueueListAdapter);
+            _playerManager = PlayerManager.CreatePlayerManager(this, _localPlayerView, _castControlView, this, _castContext);
+            _mediaQueueListAdapter.PlayerManager = _playerManager;
+            _mediaQueueList.SetAdapter(_mediaQueueListAdapter);
         }
 
         protected override void OnPause()
         {
             base.OnPause();
-            mediaQueueListAdapter.NotifyItemRangeRemoved(0, mediaQueueListAdapter.ItemCount);
-            mediaQueueList.SetAdapter(null);
-            playerManager.Release();
+            _mediaQueueListAdapter.NotifyItemRangeRemoved(0, _mediaQueueListAdapter.ItemCount);
+            _mediaQueueList.SetAdapter(null);
+            _playerManager.Release();
         }
 
         // Activity input.
@@ -82,7 +82,7 @@ namespace Com.Google.Android.Exoplayer2.CastDemo
         public override bool DispatchKeyEvent(KeyEvent @event)
         {
             //If the event was not handled then see if the player view can handle it.
-            return base.DispatchKeyEvent(@event) || playerManager.DispatchKeyEvent(@event);
+            return base.DispatchKeyEvent(@event) || _playerManager.DispatchKeyEvent(@event);
         }
 
         public void OnClick(View view)
@@ -98,11 +98,11 @@ namespace Com.Google.Android.Exoplayer2.CastDemo
         {
             if (previousIndex != C.IndexUnset)
             {
-                mediaQueueListAdapter.NotifyItemChanged(previousIndex);
+                _mediaQueueListAdapter.NotifyItemChanged(previousIndex);
             }
             if (newIndex != C.IndexUnset)
             {
-                mediaQueueListAdapter.NotifyItemChanged(newIndex);
+                _mediaQueueListAdapter.NotifyItemChanged(newIndex);
             }
         }
 
@@ -113,25 +113,25 @@ namespace Com.Google.Android.Exoplayer2.CastDemo
             View dialogList = LayoutInflater.Inflate(Resource.Layout.sample_list, null);
             ListView sampleList = (ListView)dialogList.FindViewById(Resource.Id.sample_list);
             sampleList.Adapter = new SampleListAdapter(this);
-            sampleList.OnItemClickListener = new OnItemClickListener(playerManager, mediaQueueListAdapter);
+            sampleList.OnItemClickListener = new OnItemClickListener(_playerManager, _mediaQueueListAdapter);
             return dialogList;
         }
 
         private class OnItemClickListener : Java.Lang.Object, IOnItemClickListener
         {
-            private PlayerManager playerManager;
-            private MediaQueueListAdapter mediaQueueListAdapter;
+            private PlayerManager _playerManager;
+            private MediaQueueListAdapter _mediaQueueListAdapter;
 
             public OnItemClickListener(PlayerManager playerManager, MediaQueueListAdapter mediaQueueListAdapter)
             {
-                this.playerManager = playerManager;
-                this.mediaQueueListAdapter = mediaQueueListAdapter;
+                _playerManager = playerManager;
+                _mediaQueueListAdapter = mediaQueueListAdapter;
             }
 
             public void OnItemClick(AdapterView parent, View view, int position, long id)
             {
-                playerManager.AddItem(DemoUtil.SAMPLES[position]);
-                mediaQueueListAdapter.NotifyItemInserted(playerManager.GetMediaQueueSize() - 1);
+                _playerManager.AddItem(DemoUtil.Samples[position]);
+                _mediaQueueListAdapter.NotifyItemInserted(_playerManager.GetMediaQueueSize() - 1);
             }
         }
 
@@ -140,19 +140,19 @@ namespace Com.Google.Android.Exoplayer2.CastDemo
         private class QueueItemViewHolder : RecyclerView.ViewHolder, IOnClickListener
         {
 
-            public readonly TextView textView;
-            private PlayerManager playerManager;
+            public readonly TextView TextView;
+            private PlayerManager _playerManager;
 
             public QueueItemViewHolder(TextView textView, PlayerManager playerManager) : base(textView)
             {
-                this.textView = textView;
+                TextView = textView;
                 textView.SetOnClickListener(this);
-                this.playerManager = playerManager;
+                _playerManager = playerManager;
             }
 
             public void OnClick(View v)
             {
-                playerManager.SelectQueueItem(AdapterPosition);
+                _playerManager.SelectQueueItem(AdapterPosition);
             }
         }
 
@@ -169,7 +169,7 @@ namespace Com.Google.Android.Exoplayer2.CastDemo
             public override void OnBindViewHolder(RecyclerView.ViewHolder holder, int position)
             {
                 TextView view = (TextView)holder.ItemView;
-                view.Text = PlayerManager.GetItem(position).name;
+                view.Text = PlayerManager.GetItem(position).Name;
                 //TODO: Solve coloring using the theme's ColorStateList.
                 view.SetTextColor(new Color(ColorUtils.SetAlphaComponent(view.CurrentTextColor, position == PlayerManager.GetCurrentItemIndex() ? 255 : 100)));
             }
@@ -182,63 +182,63 @@ namespace Com.Google.Android.Exoplayer2.CastDemo
 
         private class RecyclerViewCallback : ItemTouchHelper.SimpleCallback
         {
-            private int draggingFromPosition;
-            private int draggingToPosition;
-            private MediaQueueListAdapter mediaQueueListAdapter;
-            private PlayerManager playerManager;
+            private int _draggingFromPosition;
+            private int _draggingToPosition;
+            private MediaQueueListAdapter _mediaQueueListAdapter;
+            private PlayerManager _playerManager;
 
             public RecyclerViewCallback(PlayerManager playerManager, MediaQueueListAdapter mediaQueueListAdapter) : base(ItemTouchHelper.Up | ItemTouchHelper.Down, ItemTouchHelper.Start | ItemTouchHelper.End)
             {
-                this.playerManager = playerManager;
-                this.mediaQueueListAdapter = mediaQueueListAdapter;
-                draggingFromPosition = C.IndexUnset;
-                draggingToPosition = C.IndexUnset;
+                _playerManager = playerManager;
+                _mediaQueueListAdapter = mediaQueueListAdapter;
+                _draggingFromPosition = C.IndexUnset;
+                _draggingToPosition = C.IndexUnset;
             }
 
             public override bool OnMove(RecyclerView list, RecyclerView.ViewHolder origin, RecyclerView.ViewHolder target)
             {
                 int fromPosition = origin.AdapterPosition;
                 int toPosition = target.AdapterPosition;
-                if (draggingFromPosition == C.IndexUnset)
+                if (_draggingFromPosition == C.IndexUnset)
                 {
                     // A drag has started, but changes to the media queue will be reflected in clearView().
-                    draggingFromPosition = fromPosition;
+                    _draggingFromPosition = fromPosition;
                 }
-                draggingToPosition = toPosition;
-                mediaQueueListAdapter.NotifyItemMoved(fromPosition, toPosition);
+                _draggingToPosition = toPosition;
+                _mediaQueueListAdapter.NotifyItemMoved(fromPosition, toPosition);
                 return true;
             }
 
             public override void OnSwiped(RecyclerView.ViewHolder viewHolder, int direction)
             {
                 int position = viewHolder.AdapterPosition;
-                if (playerManager.removeItem(position))
+                if (_playerManager.RemoveItem(position))
                 {
-                    mediaQueueListAdapter.NotifyItemRemoved(position);
+                    _mediaQueueListAdapter.NotifyItemRemoved(position);
                 }
             }
 
             public override void ClearView(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder)
             {
                 base.ClearView(recyclerView, viewHolder);
-                if (draggingFromPosition != C.IndexUnset)
+                if (_draggingFromPosition != C.IndexUnset)
                 {
                     // A drag has ended. We reflect the media queue change in the player.
-                    if (!playerManager.MoveItem(draggingFromPosition, draggingToPosition))
+                    if (!_playerManager.MoveItem(_draggingFromPosition, _draggingToPosition))
                     {
                         // The move failed. The entire sequence of onMove calls since the drag started needs to be
                         // invalidated.
-                        mediaQueueListAdapter.NotifyDataSetChanged();
+                        _mediaQueueListAdapter.NotifyDataSetChanged();
                     }
                 }
-                draggingFromPosition = C.IndexUnset;
-                draggingToPosition = C.IndexUnset;
+                _draggingFromPosition = C.IndexUnset;
+                _draggingToPosition = C.IndexUnset;
             }
         }
 
         private class SampleListAdapter : ArrayAdapter
         {
-            public SampleListAdapter(Context context) : base(context, android.Resource.Layout.SimpleListItem1, DemoUtil.SAMPLES)
+            public SampleListAdapter(Context context) : base(context, android.Resource.Layout.SimpleListItem1, DemoUtil.Samples)
             {
             }
         }

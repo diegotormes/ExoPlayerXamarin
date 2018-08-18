@@ -39,21 +39,21 @@ namespace Com.Google.Android.Exoplayer2.CastDemo
 
         }
 
-        private static readonly string USER_AGENT = "ExoCastDemoPlayer";
-        private static DefaultBandwidthMeter BANDWIDTH_METER = new DefaultBandwidthMeter();
-        private static readonly DefaultHttpDataSourceFactory DATA_SOURCE_FACTORY = new DefaultHttpDataSourceFactory(USER_AGENT, BANDWIDTH_METER);
+        private static readonly string UserAgent = "ExoCastDemoPlayer";
+        private static DefaultBandwidthMeter _bandwidthMeter = new DefaultBandwidthMeter();
+        private static readonly DefaultHttpDataSourceFactory DataSourceFactory = new DefaultHttpDataSourceFactory(UserAgent, _bandwidthMeter);
 
-        private readonly PlayerView localPlayerView;
-        private readonly PlayerControlView castControlView;
-        private SimpleExoPlayer exoPlayer;
-        private CastPlayer castPlayer;
-        private List<DemoUtil.Sample> mediaQueue;
-        private readonly IQueuePositionListener queuePositionListener;
-        private ConcatenatingMediaSource concatenatingMediaSource;
+        private readonly PlayerView _localPlayerView;
+        private readonly PlayerControlView _castControlView;
+        private SimpleExoPlayer _exoPlayer;
+        private CastPlayer _castPlayer;
+        private List<Sample> _mediaQueue;
+        private readonly IQueuePositionListener _queuePositionListener;
+        private ConcatenatingMediaSource _concatenatingMediaSource;
 
-        private bool castMediaQueueCreationPending;
-        private int currentItemIndex;
-        private IPlayer currentPlayer;
+        private bool _castMediaQueueCreationPending;
+        private int _currentItemIndex;
+        private IPlayer _currentPlayer;
 
         /**
          * @param queuePositionListener A {@link QueuePositionListener} for queue position changes.
@@ -71,23 +71,23 @@ namespace Com.Google.Android.Exoplayer2.CastDemo
 
         private PlayerManager(IQueuePositionListener queuePositionListener, PlayerView localPlayerView, PlayerControlView castControlView, Context context, CastContext castContext)
         {
-            this.queuePositionListener = queuePositionListener;
-            this.localPlayerView = localPlayerView;
-            this.castControlView = castControlView;
-            mediaQueue = new List<DemoUtil.Sample>();
-            currentItemIndex = C.IndexUnset;
-            concatenatingMediaSource = new ConcatenatingMediaSource();
+            _queuePositionListener = queuePositionListener;
+            _localPlayerView = localPlayerView;
+            _castControlView = castControlView;
+            _mediaQueue = new List<Sample>();
+            _currentItemIndex = C.IndexUnset;
+            _concatenatingMediaSource = new ConcatenatingMediaSource();
 
-            DefaultTrackSelector trackSelector = new DefaultTrackSelector(BANDWIDTH_METER);
+            DefaultTrackSelector trackSelector = new DefaultTrackSelector(_bandwidthMeter);
             IRenderersFactory renderersFactory = new DefaultRenderersFactory(context);
-            exoPlayer = ExoPlayerFactory.NewSimpleInstance(renderersFactory, trackSelector);
-            exoPlayer.AddListener(this);
-            localPlayerView.Player = exoPlayer;
+            _exoPlayer = ExoPlayerFactory.NewSimpleInstance(renderersFactory, trackSelector);
+            _exoPlayer.AddListener(this);
+            localPlayerView.Player = _exoPlayer;
 
-            castPlayer = new CastPlayer(castContext);
-            castPlayer.AddListener(this);
-            castPlayer.SetSessionAvailabilityListener(this);
-            castControlView.Player = castPlayer;
+            _castPlayer = new CastPlayer(castContext);
+            _castPlayer.AddListener(this);
+            _castPlayer.SetSessionAvailabilityListener(this);
+            castControlView.Player = _castPlayer;
         }
 
         // Queue manipulation methods.
@@ -99,7 +99,7 @@ namespace Com.Google.Android.Exoplayer2.CastDemo
          */
         public void SelectQueueItem(int itemIndex)
         {
-            setCurrentItem(itemIndex, C.TimeUnset, true);
+            SetCurrentItem(itemIndex, C.TimeUnset, true);
         }
 
         /**
@@ -107,7 +107,7 @@ namespace Com.Google.Android.Exoplayer2.CastDemo
          */
         public int GetCurrentItemIndex()
         {
-            return currentItemIndex;
+            return _currentItemIndex;
         }
 
         /**
@@ -117,11 +117,11 @@ namespace Com.Google.Android.Exoplayer2.CastDemo
          */
         public void AddItem(Sample sample)
         {
-            mediaQueue.Add(sample);
-            concatenatingMediaSource.AddMediaSource(BuildMediaSource(sample));
-            if (currentPlayer == castPlayer)
+            _mediaQueue.Add(sample);
+            _concatenatingMediaSource.AddMediaSource(BuildMediaSource(sample));
+            if (_currentPlayer == _castPlayer)
             {
-                castPlayer.AddItems(buildMediaQueueItem(sample));
+                _castPlayer.AddItems(BuildMediaQueueItem(sample));
             }
         }
 
@@ -130,7 +130,7 @@ namespace Com.Google.Android.Exoplayer2.CastDemo
          */
         public int GetMediaQueueSize()
         {
-            return mediaQueue.Count;
+            return _mediaQueue.Count;
         }
 
         /**
@@ -141,7 +141,7 @@ namespace Com.Google.Android.Exoplayer2.CastDemo
          */
         public Sample GetItem(int position)
         {
-            return mediaQueue[position];
+            return _mediaQueue[position];
         }
 
         /**
@@ -150,29 +150,29 @@ namespace Com.Google.Android.Exoplayer2.CastDemo
          * @param itemIndex The index of the item to remove.
          * @return Whether the removal was successful.
          */
-        public bool removeItem(int itemIndex)
+        public bool RemoveItem(int itemIndex)
         {
-            concatenatingMediaSource.RemoveMediaSource(itemIndex);
-            if (currentPlayer == castPlayer)
+            _concatenatingMediaSource.RemoveMediaSource(itemIndex);
+            if (_currentPlayer == _castPlayer)
             {
-                if (castPlayer.PlaybackState != Player.StateIdle)
+                if (_castPlayer.PlaybackState != Player.StateIdle)
                 {
-                    Timeline castTimeline = castPlayer.CurrentTimeline;
+                    Timeline castTimeline = _castPlayer.CurrentTimeline;
                     if (castTimeline.PeriodCount <= itemIndex)
                     {
                         return false;
                     }
-                    castPlayer.RemoveItem((int)castTimeline.GetPeriod(itemIndex, new Period()).Id);
+                    _castPlayer.RemoveItem((int)castTimeline.GetPeriod(itemIndex, new Period()).Id);
                 }
             }
-            mediaQueue.Remove(mediaQueue[itemIndex]);
-            if (itemIndex == currentItemIndex && itemIndex == mediaQueue.Count)
+            _mediaQueue.Remove(_mediaQueue[itemIndex]);
+            if (itemIndex == _currentItemIndex && itemIndex == _mediaQueue.Count)
             {
                 MaybeSetCurrentItemAndNotify(C.IndexUnset);
             }
-            else if (itemIndex < currentItemIndex)
+            else if (itemIndex < _currentItemIndex)
             {
-                MaybeSetCurrentItemAndNotify(currentItemIndex - 1);
+                MaybeSetCurrentItemAndNotify(_currentItemIndex - 1);
             }
             return true;
         }
@@ -187,34 +187,34 @@ namespace Com.Google.Android.Exoplayer2.CastDemo
         public bool MoveItem(int fromIndex, int toIndex)
         {
             // Player update.
-            concatenatingMediaSource.MoveMediaSource(fromIndex, toIndex);
-            if (currentPlayer == castPlayer && castPlayer.PlaybackState != Player.StateIdle)
+            _concatenatingMediaSource.MoveMediaSource(fromIndex, toIndex);
+            if (_currentPlayer == _castPlayer && _castPlayer.PlaybackState != Player.StateIdle)
             {
-                Timeline castTimeline = castPlayer.CurrentTimeline;
+                Timeline castTimeline = _castPlayer.CurrentTimeline;
                 int periodCount = castTimeline.PeriodCount;
                 if (periodCount <= fromIndex || periodCount <= toIndex)
                 {
                     return false;
                 }
                 int elementId = (int)castTimeline.GetPeriod(fromIndex, new Period()).Id;
-                castPlayer.MoveItem(elementId, toIndex);
+                _castPlayer.MoveItem(elementId, toIndex);
             }
 
-            mediaQueue.Insert(toIndex, mediaQueue[fromIndex]);
-            mediaQueue.Remove(mediaQueue[fromIndex]);
+            _mediaQueue.Insert(toIndex, _mediaQueue[fromIndex]);
+            _mediaQueue.Remove(_mediaQueue[fromIndex]);
 
             // Index update.
-            if (fromIndex == currentItemIndex)
+            if (fromIndex == _currentItemIndex)
             {
                 MaybeSetCurrentItemAndNotify(toIndex);
             }
-            else if (fromIndex < currentItemIndex && toIndex >= currentItemIndex)
+            else if (fromIndex < _currentItemIndex && toIndex >= _currentItemIndex)
             {
-                MaybeSetCurrentItemAndNotify(currentItemIndex - 1);
+                MaybeSetCurrentItemAndNotify(_currentItemIndex - 1);
             }
-            else if (fromIndex > currentItemIndex && toIndex <= currentItemIndex)
+            else if (fromIndex > _currentItemIndex && toIndex <= _currentItemIndex)
             {
-                MaybeSetCurrentItemAndNotify(currentItemIndex + 1);
+                MaybeSetCurrentItemAndNotify(_currentItemIndex + 1);
             }
 
             return true;
@@ -230,13 +230,13 @@ namespace Com.Google.Android.Exoplayer2.CastDemo
          */
         public bool DispatchKeyEvent(KeyEvent @event)
         {
-            if (currentPlayer == exoPlayer)
+            if (_currentPlayer == _exoPlayer)
             {
-                return localPlayerView.DispatchKeyEvent(@event);
+                return _localPlayerView.DispatchKeyEvent(@event);
             }
             else /* currentPlayer == castPlayer */
             {
-                return castControlView.DispatchKeyEvent(@event);
+                return _castControlView.DispatchKeyEvent(@event);
             }
         }
 
@@ -245,13 +245,13 @@ namespace Com.Google.Android.Exoplayer2.CastDemo
          */
         public void Release()
         {
-            currentItemIndex = C.IndexUnset;
-            mediaQueue.Clear();
-            concatenatingMediaSource.Clear();
-            castPlayer.SetSessionAvailabilityListener(null);
-            castPlayer.Release();
-            localPlayerView.Player = null;
-            exoPlayer.Release();
+            _currentItemIndex = C.IndexUnset;
+            _mediaQueue.Clear();
+            _concatenatingMediaSource.Clear();
+            _castPlayer.SetSessionAvailabilityListener(null);
+            _castPlayer.Release();
+            _localPlayerView.Player = null;
+            _exoPlayer.Release();
         }
 
         // Player.EventListener implementation.
@@ -272,7 +272,7 @@ namespace Com.Google.Android.Exoplayer2.CastDemo
             UpdateCurrentItemIndex();
             if (timeline.IsEmpty)
             {
-                castMediaQueueCreationPending = true;
+                _castMediaQueueCreationPending = true;
             }
         }
 
@@ -280,86 +280,86 @@ namespace Com.Google.Android.Exoplayer2.CastDemo
 
         public void OnCastSessionAvailable()
         {
-            setCurrentPlayer(castPlayer);
+            SetCurrentPlayer(_castPlayer);
         }
 
         public void OnCastSessionUnavailable()
         {
-            setCurrentPlayer(exoPlayer);
+            SetCurrentPlayer(_exoPlayer);
         }
 
         // Internal methods.
 
         private void Init()
         {
-            setCurrentPlayer((castPlayer.IsCastSessionAvailable ? (IPlayer)castPlayer : exoPlayer));
+            SetCurrentPlayer((_castPlayer.IsCastSessionAvailable ? (IPlayer)_castPlayer : _exoPlayer));
         }
 
         private void UpdateCurrentItemIndex()
         {
-            int playbackState = currentPlayer.PlaybackState;
+            int playbackState = _currentPlayer.PlaybackState;
             MaybeSetCurrentItemAndNotify(
                     playbackState != Player.StateIdle && playbackState != Player.StateEnded
-                            ? currentPlayer.CurrentWindowIndex : C.IndexUnset);
+                            ? _currentPlayer.CurrentWindowIndex : C.IndexUnset);
         }
 
-        private void setCurrentPlayer(IPlayer currentPlayer)
+        private void SetCurrentPlayer(IPlayer currentPlayer)
         {
-            if (this.currentPlayer == currentPlayer)
+            if (_currentPlayer == currentPlayer)
             {
                 return;
             }
 
             // View management.
-            if (currentPlayer == exoPlayer)
+            if (currentPlayer == _exoPlayer)
             {
-                localPlayerView.Visibility = ViewStates.Visible;
-                castControlView.Hide();
+                _localPlayerView.Visibility = ViewStates.Visible;
+                _castControlView.Hide();
             }
             else /* currentPlayer == castPlayer */
             {
-                localPlayerView.Visibility = ViewStates.Gone;
-                castControlView.Show();
+                _localPlayerView.Visibility = ViewStates.Gone;
+                _castControlView.Show();
             }
 
             // Player state management.
             long playbackPositionMs = C.TimeUnset;
             int windowIndex = C.IndexUnset;
             bool playWhenReady = false;
-            if (this.currentPlayer != null)
+            if (_currentPlayer != null)
             {
-                int playbackState = this.currentPlayer.PlaybackState;
+                int playbackState = _currentPlayer.PlaybackState;
                 if (playbackState != Player.StateEnded)
                 {
-                    playbackPositionMs = this.currentPlayer.CurrentPosition;
-                    playWhenReady = this.currentPlayer.PlayWhenReady;
-                    windowIndex = this.currentPlayer.CurrentWindowIndex;
-                    if (windowIndex != currentItemIndex)
+                    playbackPositionMs = _currentPlayer.CurrentPosition;
+                    playWhenReady = _currentPlayer.PlayWhenReady;
+                    windowIndex = _currentPlayer.CurrentWindowIndex;
+                    if (windowIndex != _currentItemIndex)
                     {
                         playbackPositionMs = C.TimeUnset;
-                        windowIndex = currentItemIndex;
+                        windowIndex = _currentItemIndex;
                     }
                 }
-                this.currentPlayer.Stop(true);
+                _currentPlayer.Stop(true);
             }
             else
             {
                 // This is the initial setup. No need to save any state.
             }
 
-            this.currentPlayer = currentPlayer;
+            _currentPlayer = currentPlayer;
 
             // Media queue management.
-            castMediaQueueCreationPending = currentPlayer == castPlayer;
-            if (currentPlayer == exoPlayer)
+            _castMediaQueueCreationPending = currentPlayer == _castPlayer;
+            if (currentPlayer == _exoPlayer)
             {
-                exoPlayer.Prepare(concatenatingMediaSource);
+                _exoPlayer.Prepare(_concatenatingMediaSource);
             }
 
             // Playback transition.
             if (windowIndex != C.IndexUnset)
             {
-                setCurrentItem(windowIndex, playbackPositionMs, playWhenReady);
+                SetCurrentItem(windowIndex, playbackPositionMs, playWhenReady);
             }
         }
 
@@ -370,64 +370,64 @@ namespace Com.Google.Android.Exoplayer2.CastDemo
          * @param positionMs The position at which playback should start.
          * @param playWhenReady Whether the player should proceed when ready to do so.
          */
-        private void setCurrentItem(int itemIndex, long positionMs, bool playWhenReady)
+        private void SetCurrentItem(int itemIndex, long positionMs, bool playWhenReady)
         {
             MaybeSetCurrentItemAndNotify(itemIndex);
-            if (castMediaQueueCreationPending)
+            if (_castMediaQueueCreationPending)
             {
-                MediaQueueItem[] items = new MediaQueueItem[mediaQueue.Count];
+                MediaQueueItem[] items = new MediaQueueItem[_mediaQueue.Count];
                 for (int i = 0; i < items.Length; i++)
                 {
-                    items[i] = buildMediaQueueItem(mediaQueue[i]);
+                    items[i] = BuildMediaQueueItem(_mediaQueue[i]);
                 }
-                castMediaQueueCreationPending = false;
-                castPlayer.LoadItems(items, itemIndex, positionMs, Player.RepeatModeOff);
+                _castMediaQueueCreationPending = false;
+                _castPlayer.LoadItems(items, itemIndex, positionMs, Player.RepeatModeOff);
             }
             else
             {
-                currentPlayer.SeekTo(itemIndex, positionMs);
-                currentPlayer.PlayWhenReady = playWhenReady;
+                _currentPlayer.SeekTo(itemIndex, positionMs);
+                _currentPlayer.PlayWhenReady = playWhenReady;
             }
         }
 
         private void MaybeSetCurrentItemAndNotify(int currentItemIndex)
         {
-            if (this.currentItemIndex != currentItemIndex)
+            if (_currentItemIndex != currentItemIndex)
             {
-                int oldIndex = this.currentItemIndex;
-                this.currentItemIndex = currentItemIndex;
-                queuePositionListener.OnQueuePositionChanged(oldIndex, currentItemIndex);
+                int oldIndex = _currentItemIndex;
+                _currentItemIndex = currentItemIndex;
+                _queuePositionListener.OnQueuePositionChanged(oldIndex, currentItemIndex);
             }
         }
 
         private static IMediaSource BuildMediaSource(Sample sample)
         {
-            android.Net.Uri uri = android.Net.Uri.Parse(sample.uri);
-            switch (sample.mimeType)
+            android.Net.Uri uri = android.Net.Uri.Parse(sample.Uri);
+            switch (sample.MimeType)
             {
-                case DemoUtil.MIME_TYPE_SS:
-                    return new SsMediaSource.Factory(new DefaultSsChunkSource.Factory(DATA_SOURCE_FACTORY), DATA_SOURCE_FACTORY).CreateMediaSource(uri);
-                case DemoUtil.MIME_TYPE_DASH:
-                    return new DashMediaSource.Factory(new DefaultDashChunkSource.Factory(DATA_SOURCE_FACTORY), DATA_SOURCE_FACTORY).CreateMediaSource(uri);
-                case DemoUtil.MIME_TYPE_HLS:
-                    return new HlsMediaSource.Factory(DATA_SOURCE_FACTORY).CreateMediaSource(uri);
-                case DemoUtil.MIME_TYPE_VIDEO_MP4:
-                    return new ExtractorMediaSource.Factory(DATA_SOURCE_FACTORY).CreateMediaSource(uri);
-                case DemoUtil.MIME_TYPE_AUDIO:
-                    return new ExtractorMediaSource.Factory(DATA_SOURCE_FACTORY).CreateMediaSource(uri);
+                case MimeTypeSs:
+                    return new SsMediaSource.Factory(new DefaultSsChunkSource.Factory(DataSourceFactory), DataSourceFactory).CreateMediaSource(uri);
+                case MimeTypeDash:
+                    return new DashMediaSource.Factory(new DefaultDashChunkSource.Factory(DataSourceFactory), DataSourceFactory).CreateMediaSource(uri);
+                case MimeTypeHls:
+                    return new HlsMediaSource.Factory(DataSourceFactory).CreateMediaSource(uri);
+                case MimeTypeVideoMp4:
+                    return new ExtractorMediaSource.Factory(DataSourceFactory).CreateMediaSource(uri);
+                case MimeTypeAudio:
+                    return new ExtractorMediaSource.Factory(DataSourceFactory).CreateMediaSource(uri);
                 default:
                     {
-                        throw new IllegalStateException("Unsupported type: " + sample.mimeType);
+                        throw new IllegalStateException("Unsupported type: " + sample.MimeType);
                     }
             }
         }
 
-        private static MediaQueueItem buildMediaQueueItem(DemoUtil.Sample sample)
+        private static MediaQueueItem BuildMediaQueueItem(Sample sample)
         {
             MediaMetadata movieMetadata = new MediaMetadata(MediaMetadata.MediaTypeMovie);
-            movieMetadata.PutString(MediaMetadata.KeyTitle, sample.name);
-            MediaInfo mediaInfo = new MediaInfo.Builder(sample.uri)
-                    .SetStreamType(MediaInfo.StreamTypeBuffered).SetContentType(sample.mimeType)
+            movieMetadata.PutString(MediaMetadata.KeyTitle, sample.Name);
+            MediaInfo mediaInfo = new MediaInfo.Builder(sample.Uri)
+                    .SetStreamType(MediaInfo.StreamTypeBuffered).SetContentType(sample.MimeType)
                     .SetMetadata(movieMetadata).Build();
             return new MediaQueueItem.Builder(mediaInfo).Build();
         }
